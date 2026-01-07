@@ -1,0 +1,45 @@
+# .NET
+bin/
+obj/
+.vs/
+*.user
+*.suo
+*.userprefs
+*.lock.json
+*.ide
+*.pdb
+*.cache
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Custom
+WindowSpy/jietu/
+WindowSpy/linshijietu/
+WindowSpy/steps.json
+WindowSpy/steps*.json
+
+# Large Binary Dependencies
+Scripts/*.dll
+Scripts/onnxruntime-win-x64-gpu-*/
+Scripts/dist/

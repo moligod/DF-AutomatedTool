@@ -1,0 +1,10 @@
+<Window x:Class="WindowSpy.OverlayPickWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="OverlayPickWindow" WindowStyle="None" AllowsTransparency="True" Background="#01FFFFFF"
+        Topmost="True" WindowState="Maximized" ShowInTaskbar="False">
+    <Canvas x:Name="RootCanvas" Background="Transparent"
+            MouseLeftButtonDown="RootCanvas_MouseLeftButtonDown"
+            MouseLeftButtonUp="RootCanvas_MouseLeftButtonUp">
+    </Canvas>
+</Window>

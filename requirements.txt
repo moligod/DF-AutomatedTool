@@ -1,0 +1,8 @@
+numpy>=1.21.0
+opencv-python>=4.6.0
+shapely>=2.0.0
+pyclipper>=1.3.0
+onnx>=1.14.0
+# 默认启用 NVIDIA GPU 支持。
+# 如果使用 AMD 显卡，请注释掉下行，并安装 onnxruntime-directml
+onnxruntime-gpu>=1.16.0

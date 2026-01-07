@@ -1,0 +1,30 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <UseWPF>true</UseWPF>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="OpenCvSharp4.Extensions" Version="4.10.0.20240616" />
+    <PackageReference Include="OpenCvSharp4.Windows" Version="4.10.0.20240616" />
+    <PackageReference Include="System.Drawing.Common" Version="8.0.8" />
+    <PackageReference Include="System.Management" Version="10.0.1" />
+  </ItemGroup>
+  
+  <ItemGroup>
+      <!-- 包含 Scripts 目录，排除所有环境和模型，只保留源代码 -->
+      <None Include="..\Scripts\**" Exclude="..\Scripts\build\**;..\Scripts\__pycache__\**;..\Scripts\*.spec;..\Scripts\onnxruntime-win-x64-gpu-1.20.0\**;..\Scripts\dist\**;..\Scripts\*.dll;..\Scripts\onnxocr\models\**" Link="Scripts\%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+      <EmbeddedResource Include="check_gpu_env.py" />
+  </ItemGroup>
+  
+  <ItemGroup>
+    <!-- 已移除所有手动 DLL 引用 -->
+  </ItemGroup>
+
+</Project>

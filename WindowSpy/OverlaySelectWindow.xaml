@@ -1,0 +1,12 @@
+<Window x:Class="WindowSpy.OverlaySelectWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="OverlaySelectWindow" WindowStyle="None" AllowsTransparency="True" Background="#01FFFFFF"
+        Topmost="True" WindowState="Maximized" ShowInTaskbar="False">
+    <Canvas x:Name="RootCanvas" Background="Transparent"
+            MouseLeftButtonDown="RootCanvas_MouseLeftButtonDown"
+            MouseMove="RootCanvas_MouseMove"
+            MouseLeftButtonUp="RootCanvas_MouseLeftButtonUp">
+        <Rectangle x:Name="SelectionRect" Stroke="Red" StrokeThickness="2" Visibility="Collapsed"/>
+    </Canvas>
+</Window>
