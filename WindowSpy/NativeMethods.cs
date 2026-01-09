@@ -100,6 +100,12 @@ namespace WindowSpy
         private const int MOUSEEVENTF_LEFTUP = 0x04;
         private const int MOUSEEVENTF_ABSOLUTE = 0x8000;
 
+        [DllImport("user32.dll")]
+        public static extern void keybd_event(byte bVk, byte bScan, uint dwFlags, int dwExtraInfo);
+
+        public const int KEYEVENTF_EXTENDEDKEY = 0x0001;
+        public const int KEYEVENTF_KEYUP = 0x0002;
+
         public static string GetWindowTitle(IntPtr hwnd)
         {
             int length = GetWindowTextLength(hwnd);

@@ -62,16 +62,8 @@
         </StackPanel>
 
         <StackPanel Grid.Row="1" Grid.Column="0" VerticalAlignment="Center">
-            <TextBlock Text="本软件完全开源免费，仅供学习使用！" 
-                       Foreground="Red" FontSize="18" FontWeight="Bold" 
-                       HorizontalAlignment="Center" TextWrapping="Wrap" Margin="10,0,10,4"/>
-            <TextBlock Text="反馈群856078436" 
-                       Foreground="Black" FontSize="16" FontWeight="Bold" 
-                       HorizontalAlignment="Center" TextWrapping="Wrap" Margin="10,0,10,4"/>
-            <TextBlock Text="注意：如果鼠标无法移动请使用管理员启动程序" 
-                       Foreground="Red" FontSize="16" FontWeight="Bold" 
-                       HorizontalAlignment="Center" TextWrapping="Wrap" Margin="10,0,10,5"/>
             <TextBlock x:Name="UsageNoteText" Text="步骤队列使用事项：(默认不写)"  
+                       Visibility="Collapsed"
                        Foreground="Gray" HorizontalAlignment="Center" TextWrapping="Wrap" Margin="10,0,10,0"/>
         </StackPanel>
 
@@ -119,7 +111,10 @@
                                     <TextBox x:Name="RandomDwellA" Width="40" Height="28" VerticalAlignment="Center" Text="0" VerticalContentAlignment="Center" ToolTip="设置随机偏差范围，例如填50表示在基准值上下50ms内波动 (±50)"/>
                                 </StackPanel>
                             </StackPanel>
-                            <Button Grid.Row="3" Grid.Column="0" Content="添加A识别步骤" Width="120" Height="32" Margin="0,0,8,0" Click="AddOcrStepA_Click"/>
+                            <StackPanel Grid.Row="3" Grid.Column="0" Orientation="Horizontal">
+                                <Button Content="添加A识别步骤" Width="120" Height="32" Margin="0,0,8,0" Click="AddOcrStepA_Click"/>
+                                <CheckBox x:Name="OcrAOnlyNums" Content="只识别数字" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                            </StackPanel>
                             <StackPanel Grid.Row="3" Grid.Column="1" Orientation="Horizontal">
                                 <Button Content="添加A点击步骤" Width="120" Height="32" Margin="0,0,8,0" Click="AddClickStepA_Click"/>
                                 <Button Content="添加置顶A步骤" Width="120" Height="32" Margin="0,0,8,0" Click="AddBringFrontA_Click"/>
@@ -170,7 +165,10 @@
                                     <TextBox x:Name="RandomDwellB" Width="40" Height="28" VerticalAlignment="Center" Text="0" VerticalContentAlignment="Center" ToolTip="设置随机偏差范围，例如填50表示在基准值上下50ms内波动 (±50)"/>
                                 </StackPanel>
                             </StackPanel>
-                            <Button Grid.Row="3" Grid.Column="0" Content="添加B识别步骤" Width="120" Height="32" Margin="0,0,8,0" Click="AddOcrStepB_Click"/>
+                            <StackPanel Grid.Row="3" Grid.Column="0" Orientation="Horizontal">
+                                <Button Content="添加B识别步骤" Width="120" Height="32" Margin="0,0,8,0" Click="AddOcrStepB_Click"/>
+                                <CheckBox x:Name="OcrBOnlyNums" Content="只识别数字" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                            </StackPanel>
                             <StackPanel Grid.Row="3" Grid.Column="1" Orientation="Horizontal">
                                 <Button Content="添加B点击步骤" Width="120" Height="32" Margin="0,0,8,0" Click="AddClickStepB_Click"/>
                                 <Button Content="添加置顶B步骤" Width="120" Height="32" Click="AddBringFrontB_Click"/>
@@ -181,44 +179,59 @@
             <TabItem Header="条件">
                 <StackPanel Margin="8">
                     <Grid>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="Auto"/>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="Auto"/>
-                            <ColumnDefinition Width="160"/>
-                            <ColumnDefinition Width="Auto"/>
-                            <ColumnDefinition Width="Auto"/>
-                        </Grid.ColumnDefinitions>
-                        <TextBlock Grid.Column="0" Margin="0,0,4,0" VerticalAlignment="Center" Text="正则匹配"/>
-                        <TextBox Grid.Column="1" x:Name="ConditionPattern" Height="28" VerticalAlignment="Center" VerticalContentAlignment="Center" ToolTip="正则表达式模式，例如：\d+ 表示匹配数字"/>
-                        <TextBlock Grid.Column="2" Margin="12,0,4,0" VerticalAlignment="Center" Text="来源变量"/>
-                        <TextBox Grid.Column="3" x:Name="ConditionKey" Height="28" VerticalAlignment="Center" VerticalContentAlignment="Center" ToolTip="要检查的变量名。留空则检查上一步识别结果"/>
-                        <CheckBox Grid.Column="4" x:Name="JumpOnCondTrue" Content="条件为真则跳出" Margin="12,0,0,0" VerticalAlignment="Center" ToolTip="如果勾选，则匹配成功时跳出当前循环或结束脚本"/>
-                        <Button Grid.Column="5" Content="添加" Width="80" Height="28" Margin="12,0,0,0" Click="AddConditionStep_Click"/>
-                    </Grid>
-                    <Grid Margin="0,8,0,0">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="Auto"/>
                             <ColumnDefinition Width="*"/>
                             <ColumnDefinition Width="Auto"/>
                             <ColumnDefinition Width="Auto"/>
                         </Grid.ColumnDefinitions>
-                        <TextBlock Grid.Column="0" Margin="0,0,4,0" VerticalAlignment="Center" Text="表达式条件"/>
-                        <TextBox Grid.Column="1" x:Name="ExprBox" Height="28" VerticalAlignment="Center" HorizontalAlignment="Stretch" MinWidth="240" VerticalContentAlignment="Center"/>
-                        <CheckBox Grid.Column="2" x:Name="JumpOnExprTrue" Content="为真则跳出" Margin="8,0,0,0" VerticalAlignment="Center"/>
-                        <Button Grid.Column="3" Content="添加" Width="80" Height="28" Margin="8,0,0,0" Click="AddExprStep_Click"/>
+                        <TextBlock Grid.Row="0" Grid.Column="0" Margin="0,0,4,0" VerticalAlignment="Center" Text="表达式条件"/>
+                        <TextBox Grid.Row="0" Grid.Column="1" Grid.ColumnSpan="3" x:Name="ExprBox" Height="28" VerticalAlignment="Center" HorizontalAlignment="Stretch" MinWidth="240" VerticalContentAlignment="Center" GotFocus="ExprBox_GotFocus" LostFocus="ExprBox_LostFocus">
+                            <TextBox.ToolTip>
+                                <TextBlock>
+                                    支持运算符: ==, !=, >, >=, &lt;, &lt;=, AND(&amp;&amp;), OR(||)<LineBreak/>
+                                    示例: A1 == '文本' OR B1 > 100<LineBreak/>
+                                    变量说明: A1, B1 等为保存的变量名，文本需用引号包裹
+                                </TextBlock>
+                            </TextBox.ToolTip>
+                        </TextBox>
+                        
+                        <TextBlock Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="3" x:Name="ExprHelpText" Visibility="Collapsed" Margin="0,2,0,0" Foreground="Gray" FontSize="11">
+                            支持运算符: ==, !=, >, >=, &lt;, &lt;=, and (&amp;&amp;), or (||)<LineBreak/>
+                            a1 == "中文" 或 b1 > 100
+                        </TextBlock>
+                        <StackPanel Grid.Row="2" Grid.Column="1" Grid.ColumnSpan="3" Orientation="Horizontal" Margin="0,8,0,0">
+                            <Button Content="添加 If" Width="80" Height="28" Click="AddIfStep_Click" ToolTip="添加 If 开始块 (使用上方表达式)"/>
+                            <Button Content="添加 ElseIf" Width="80" Height="28" Margin="8,0,0,0" Click="AddElseIfStep_Click" ToolTip="添加 ElseIf 块 (使用上方表达式)"/>
+                            <Button Content="添加 Else" Width="80" Height="28" Margin="8,0,0,0" Click="AddElseStep_Click" ToolTip="添加 Else 块 (无条件)"/>
+                            <Button Content="添加 EndIf" Width="80" Height="28" Margin="8,0,0,0" Click="AddEndIfStep_Click" ToolTip="添加 EndIf 结束块"/>
+                            <Button Content="跳出If/Else" Width="90" Height="28" Margin="8,0,0,0" Click="AddBreakBlock_Click" ToolTip="跳出当前的 If/ElseIf/Else 块 (跳转到 EndIf 后)"/>
+                        </StackPanel>
                     </Grid>
                 </StackPanel>
             </TabItem>
             <TabItem Header="循环">
                 <WrapPanel Margin="8">
-                    <TextBlock Margin="0,0,4,0" VerticalAlignment="Center" Text="循环次数"/>
-                    <TextBox x:Name="LoopCount" Width="60" Height="28" VerticalAlignment="Center" Text="1" VerticalContentAlignment="Center"/>
-                    <CheckBox x:Name="BreakOnEmpty" Content="识别为空则跳出" Margin="12,0,0,0" VerticalAlignment="Center"/>
-                    <TextBlock Margin="12,0,4,0" VerticalAlignment="Center" Text="内循环次数"/>
-                    <TextBox x:Name="LoopInnerCount" Width="60" Height="28" VerticalAlignment="Center" Text="3" VerticalContentAlignment="Center"/>
-                    <Button Content="添加循环开始" Width="110" Height="32" Margin="8,0,0,0" Click="AddLoopStart_Click"/>
-                    <Button Content="添加循环结束" Width="110" Height="32" Margin="8,0,0,0" Click="AddLoopEnd_Click"/>
+                    <TextBlock Margin="0,0,4,0" VerticalAlignment="Center" Text="内循环次数"/>
+                    <TextBox x:Name="LoopInnerCount" Width="60" Height="28" VerticalAlignment="Center" Text="3" VerticalContentAlignment="Center" ToolTip="添加'循环开始'步骤时默认使用的循环次数（控制局部步骤块的重复）"/>
+                    <Button Content="添加循环开始" Width="110" Height="32" Margin="8,0,0,0" Click="AddLoopStart_Click" ToolTip="添加一个循环开始步骤，使用左侧设置的'内循环次数'"/>
+                    <Button Content="添加循环结束" Width="110" Height="32" Margin="8,0,0,0" Click="AddLoopEnd_Click" ToolTip="添加一个循环结束步骤，与最近的'循环开始'配对"/>
+                    <Button Content="跳出循环" Width="90" Height="32" Margin="8,0,0,0" Click="AddBreakLoop_Click" ToolTip="跳出最近的一层循环"/>
+                    <Button Content="跳入下次循环" Width="110" Height="32" Margin="8,0,0,0" Click="AddContinue_Click" ToolTip="跳过本次循环剩余部分，进入下一次迭代"/>
+                </WrapPanel>
+            </TabItem>
+            <TabItem Header="跳转">
+                <WrapPanel Margin="8">
+                    <TextBlock Margin="0,0,4,0" VerticalAlignment="Center" Text="标签名称"/>
+                    <TextBox x:Name="LabelBox" Width="120" Height="28" VerticalAlignment="Center" VerticalContentAlignment="Center" ToolTip="标签名称"/>
+                    <Button Content="添加标签" Width="90" Height="32" Margin="8,0,0,0" Click="AddLabel_Click" ToolTip="添加一个跳转标签 (名称使用左侧标签框)"/>
+                    <Button Content="添加跳转" Width="90" Height="32" Margin="8,0,0,0" Click="AddGoto_Click" ToolTip="无条件跳转到指定标签 (名称使用左侧标签框)"/>
                 </WrapPanel>
             </TabItem>
             <TabItem Header="保存">
@@ -229,8 +242,23 @@
                     <Button Content="添加保存B结果" Width="120" Height="32" Margin="8,0,0,0" Click="AddSaveB_Click"/>
                 </WrapPanel>
             </TabItem>
+            <TabItem Header="按键">
+                <WrapPanel Margin="8">
+                    <TextBlock Margin="0,0,4,0" VerticalAlignment="Center" Text="按键名称"/>
+                    <TextBox x:Name="KeyPressBox" Width="100" Height="28" VerticalAlignment="Center" Text="" VerticalContentAlignment="Center" ToolTip="输入按键名称(如Enter, F1, A)"/>
+                    <TextBlock Margin="12,0,4,0" VerticalAlignment="Center" Text="按压(ms)"/>
+                    <TextBox x:Name="KeyPressDwell" Width="60" Height="28" VerticalAlignment="Center" Text="50" VerticalContentAlignment="Center" ToolTip="按键按下的持续时间(ms)"/>
+                    <Button Content="添加按键步骤" Width="100" Height="32" Margin="8,0,0,0" Click="AddKeyPressStep_Click"/>
+                    <Button x:Name="IdentifyKeyButton" Content="识别按键" Width="80" Height="32" Margin="8,0,0,0" Click="IdentifyKey_Click"/>
+                </WrapPanel>
+            </TabItem>
             <TabItem Header="步骤编辑">
                 <StackPanel Margin="8">
+                    <WrapPanel Margin="0,0,0,8">
+                        <TextBlock Margin="0,0,4,0" VerticalAlignment="Center" Text="步骤队列执行次数"/>
+                        <TextBox x:Name="LoopCount" Width="60" Height="28" VerticalAlignment="Center" Text="1" VerticalContentAlignment="Center" ToolTip="整个脚本列表的重复执行次数"/>
+                        <CheckBox x:Name="BreakOnEmpty" Content="识别为空则(防止脚本异常点击无法暂停)" Margin="12,0,0,0" VerticalAlignment="Center" ToolTip="如果勾选，当任何识别步骤(OCR)的结果为空时，将立即停止整个脚本的运行"/>
+                    </WrapPanel>
                     <WrapPanel Margin="0,0,0,8">
                         <Button Content="执行全部步骤" Width="120" Height="32" Click="RunScriptAll_Click"/>
                         <Button Content="清空全部步骤" Width="120" Height="32" Margin="8,0,0,0" Click="ClearScriptAll_Click"/>
@@ -242,6 +270,7 @@
                         <Button Content="加载队列" Width="100" Height="32" Margin="8,0,0,0" Click="LoadSteps_Click"/>
                         <CheckBox x:Name="FailSafeCheck" Content="防卡死(5秒内右键10次)" IsChecked="True" VerticalAlignment="Center" Margin="8,0,0,0" ToolTip="启用后，5秒内连续点击鼠标右键10次可强制停止脚本"/>
                         <CheckBox x:Name="UseGpuCheck" Content="启用GPU加速" IsChecked="True" VerticalAlignment="Center" Margin="8,0,0,0" ToolTip="勾选：尝试使用显卡加速(需要环境支持)；不勾选：强制使用CPU"/>
+                        <CheckBox x:Name="ReuseOcrRoiCacheCheck" Content="ROI未变化复用OCR结果" VerticalAlignment="Center" Margin="8,0,0,0" ToolTip="开启后：识别区域画面判定未变化时，将直接复用上次OCR文本以提速；仍可能存在极小概率漏判变化，建议仅在画面变化明显的场景使用"/>
                     </WrapPanel>
                 </StackPanel>
             </TabItem>
@@ -255,7 +284,14 @@
                     <TextBlock Text="MoliGod 自动化助手" FontSize="16" FontWeight="Bold" Margin="0,0,0,8"/>
                     <TextBlock Text="版本：v0.2" Margin="0,0,0,4"/>
                     <TextBlock Text="作者：MoliGod" Margin="0,0,0,16"/>
-                    <TextBlock Text="本软件仅供学习交流使用，请勿用于非法用途。" TextWrapping="Wrap" Foreground="Gray"/>
+                    <TextBlock Text="反馈群856078436" 
+                               Foreground="Black" FontSize="16" FontWeight="Bold" 
+                               HorizontalAlignment="Left" TextWrapping="Wrap" Margin="0,0,0,4"/>
+                    <TextBlock Text="注意：如果鼠标无法移动请使用管理员启动程序" 
+                               FontSize="16" FontWeight="Bold" 
+                               HorizontalAlignment="Left" TextWrapping="Wrap" Margin="0,0,0,16"/>
+                    <TextBlock Text="本工具为纯OCR识别点击,用前请记住，怕别用用别怕！" TextWrapping="Wrap" Foreground="Red" FontSize="20" FontWeight="Bold"/>
+                    <TextBlock Text="本软件开源免费仅供学习交流，请勿用于非法用途以及商业用途！" TextWrapping="Wrap" Foreground="Red" FontSize="20" FontWeight="Bold"/>
                 </StackPanel>
             </TabItem>
         </TabControl>
@@ -279,7 +315,7 @@
         <StackPanel Grid.Row="3" Grid.Column="0" Orientation="Vertical" Margin="0,8,0,0">
             <TextBlock Text="输出日志：" FontWeight="Bold"/>
             <Grid>
-                <TextBox x:Name="OutputBox" Height="200" IsReadOnly="True" TextWrapping="Wrap"
+                <TextBox x:Name="OutputBox" Height="110" IsReadOnly="True" TextWrapping="Wrap"
                          VerticalScrollBarVisibility="Auto" FontFamily="Consolas"/>
                 <Button Content="复制全部日志" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,4,20,0" Padding="8,2" Click="CopyLog_Click" Opacity="0.8"/>
             </Grid>

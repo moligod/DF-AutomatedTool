@@ -19,7 +19,7 @@
   
   <ItemGroup>
       <!-- 包含 Scripts 目录，排除所有环境和模型，只保留源代码 -->
-      <None Include="..\Scripts\**" Exclude="..\Scripts\build\**;..\Scripts\__pycache__\**;..\Scripts\*.spec;..\Scripts\onnxruntime-win-x64-gpu-1.20.0\**;..\Scripts\dist\**;..\Scripts\*.dll;..\Scripts\onnxocr\models\**" Link="Scripts\%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+      <None Include="..\Scripts\**" Exclude="..\Scripts\build\**;..\Scripts\__pycache__\**;..\Scripts\*.spec;..\Scripts\dist\**;..\Scripts\*.dll" Link="Scripts\%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
       <EmbeddedResource Include="check_gpu_env.py" />
   </ItemGroup>
   

@@ -2,23 +2,27 @@ import argparse
 import json
 import sys
 import os
+import time
+import base64
+import numpy as np
+import cv2
 
-def process_image(model, img_path):
-    import cv2
-    import time
-    img = cv2.imread(img_path)
-    if img is None:
-        # Try to decode path, prevent failure due to path encoding issues
-        try:
-            # In some cases sys.stdin path encoding might not be utf-8
-            # Using numpy fromfile is the most direct way
-            import numpy as np
-            img = cv2.imdecode(np.fromfile(img_path, dtype=np.uint8), cv2.IMREAD_COLOR)
-        except Exception:
-            pass
-            
-    if img is None:
-        return {"error": f"cv2.imread failed: {img_path}"}
+def process_image(model, img_input):
+    if isinstance(img_input, str):
+        img = cv2.imread(img_input)
+        if img is None:
+            # Try to decode path, prevent failure due to path encoding issues
+            try:
+                img = cv2.imdecode(np.fromfile(img_input, dtype=np.uint8), cv2.IMREAD_COLOR)
+            except Exception:
+                pass
+        
+        if img is None:
+            return {"error": f"cv2.imread failed: {img_input}"}
+    elif isinstance(img_input, np.ndarray):
+        img = img_input
+    else:
+        return {"error": "Invalid image input type"}
     
     try:
         start_time = time.time()
@@ -79,14 +83,6 @@ def main():
         print(json.dumps({"error": f"onnx_root not found: {onnx_root}"}))
         return 1
         
-    # Add cuDNN path to DLL search path if provided via env var
-    cudnn_path = os.environ.get("CUDNN_PATH")
-    if cudnn_path and os.path.isdir(cudnn_path) and hasattr(os, "add_dll_directory"):
-        try:
-            os.add_dll_directory(cudnn_path)
-        except Exception as e:
-            pass
-
     # import package
     sys.path.insert(0, onnx_root)
     try:
@@ -121,15 +117,15 @@ def main():
             if hasattr(model, 'text_detector') and hasattr(model.text_detector, 'det_onnx_session'):
                 providers = model.text_detector.det_onnx_session.get_providers()
                 sys.stderr.write(f"[Python Info] TextDetector Providers: {providers}\n")
-                if 'CUDAExecutionProvider' not in providers and use_gpu:
-                     sys.stderr.write(f"[Python Warning] GPU was requested but TextDetector is using: {providers}\n")
+                if 'DmlExecutionProvider' not in providers and use_gpu:
+                     sys.stderr.write(f"[Python Warning] DirectML was requested but TextDetector is using: {providers}\n")
             
             # 检查 rec 模型 session 的 providers
             if hasattr(model, 'text_recognizer') and hasattr(model.text_recognizer, 'rec_onnx_session'):
                 providers = model.text_recognizer.rec_onnx_session.get_providers()
                 sys.stderr.write(f"[Python Info] TextRecognizer Providers: {providers}\n")
-                if 'CUDAExecutionProvider' not in providers and use_gpu:
-                     sys.stderr.write(f"[Python Warning] GPU was requested but TextRecognizer is using: {providers}\n")
+                if 'DmlExecutionProvider' not in providers and use_gpu:
+                     sys.stderr.write(f"[Python Warning] DirectML was requested but TextRecognizer is using: {providers}\n")
                      
         except Exception as e:
             sys.stderr.write(f"[Python Warning] Failed to inspect model providers: {e}\n")
@@ -138,7 +134,6 @@ def main():
         if use_gpu:
             sys.stderr.write("[Python Info] Performing GPU Warmup (100x100 black image)...\n")
             sys.stderr.flush()
-            import numpy as np
             warmup_img = np.zeros((100, 100, 3), dtype=np.uint8)
             try:
                 model.ocr(warmup_img, det=True, rec=True, cls=use_angle_cls)
@@ -167,7 +162,20 @@ def main():
                 if not line or line == "EXIT":
                     break
                 
-                result = process_image(model, line)
+                if line.startswith("base64:"):
+                    try:
+                        b64_data = line[7:]
+                        img_bytes = base64.b64decode(b64_data)
+                        nparr = np.frombuffer(img_bytes, np.uint8)
+                        img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+                        if img is None:
+                             result = {"error": "Failed to decode base64 image"}
+                        else:
+                             result = process_image(model, img)
+                    except Exception as e:
+                        result = {"error": f"Base64 decode error: {e}"}
+                else:
+                    result = process_image(model, line)
                 
                 # Debug info
                 sys.stderr.write("[Python Info] Result processed, encoding JSON...\n")

@@ -15,7 +15,10 @@
 
         <!-- Click: Point -->
         <DockPanel Margin="0,5" x:Name="PanelPoint">
-            <TextBlock Text="点击位置:" Width="100" VerticalAlignment="Center"/>
+            <StackPanel Width="100" VerticalAlignment="Center">
+                <TextBlock Text="点击位置:"/>
+                <Button x:Name="BtnPickPoint" Content="重选位置" Margin="0,5,10,0" Width="80" Height="22" HorizontalAlignment="Left" Click="BtnPickPoint_Click"/>
+            </StackPanel>
             <StackPanel Orientation="Vertical">
                 <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
                     <TextBlock Text="X:" VerticalAlignment="Center" Margin="0,0,5,0"/>
@@ -42,7 +45,10 @@
 
         <!-- OCR: Rect -->
         <StackPanel x:Name="PanelRect" Margin="0,5">
-             <TextBlock Text="识别区域:" Margin="0,0,0,5"/>
+             <StackPanel Orientation="Horizontal" Margin="0,0,0,5">
+                 <TextBlock Text="识别区域:" VerticalAlignment="Center"/>
+                 <Button x:Name="BtnSelectRect" Content="重选识别位置" Margin="10,0,0,0" Width="90" Height="22" Click="BtnSelectRect_Click"/>
+             </StackPanel>
              <StackPanel Orientation="Horizontal">
                 <TextBlock Text="X:" VerticalAlignment="Center" Margin="0,0,5,0"/>
                 <TextBox x:Name="TxtRectX" Width="50" Height="26" VerticalContentAlignment="Center"/>
@@ -55,6 +61,14 @@
              </StackPanel>
         </StackPanel>
 
+        <!-- OCR: Options -->
+        <DockPanel Margin="0,5" x:Name="PanelOcrOpt">
+            <StackPanel>
+                <CheckBox x:Name="ChkOcrNums" Content="只识别数字" VerticalAlignment="Center"/>
+                <CheckBox x:Name="ChkReuseOcrRoi" Content="ROI未变化复用OCR结果" VerticalAlignment="Center" Margin="0,4,0,0"/>
+            </StackPanel>
+        </DockPanel>
+
         <!-- Loop: Count -->
         <DockPanel Margin="0,5" x:Name="PanelCount">
             <TextBlock Text="循环次数:" Width="100" VerticalAlignment="Center"/>
@@ -66,6 +80,12 @@
             <TextBlock x:Name="LblPattern" Text="模式/表达式:" Width="100" VerticalAlignment="Center"/>
             <TextBox x:Name="TxtPattern" Height="26" VerticalContentAlignment="Center"/>
         </DockPanel>
+
+        <TextBlock x:Name="TxtExprHelp" Margin="100,0,0,5" Foreground="Gray" TextWrapping="Wrap" Visibility="Collapsed" FontSize="10">
+            支持运算符: ==, !=, >, >=, &lt;, &lt;=, AND(&amp;&amp;), OR(||)<LineBreak/>
+            示例: A1 == '文本' OR B1 > 100<LineBreak/>
+            变量说明: A1, B1 等为保存的变量名，文本需用引号包裹
+        </TextBlock>
 
         <!-- Save/Condition: Key -->
         <DockPanel Margin="0,5" x:Name="PanelKey">

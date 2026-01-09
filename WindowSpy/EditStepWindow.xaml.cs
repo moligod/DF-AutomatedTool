@@ -41,8 +41,10 @@ namespace WindowSpy
             PanelPoint.Visibility = Visibility.Collapsed;
             PanelDwell.Visibility = Visibility.Collapsed;
             PanelRect.Visibility = Visibility.Collapsed;
+            PanelOcrOpt.Visibility = Visibility.Collapsed;
             PanelCount.Visibility = Visibility.Collapsed;
             PanelPattern.Visibility = Visibility.Collapsed;
+            TxtExprHelp.Visibility = Visibility.Collapsed;
             PanelKey.Visibility = Visibility.Collapsed;
             PanelJump.Visibility = Visibility.Collapsed;
 
@@ -60,6 +62,9 @@ namespace WindowSpy
                     break;
                 case ActionType.Ocr:
                     PanelRect.Visibility = Visibility.Visible;
+                    PanelOcrOpt.Visibility = Visibility.Visible;
+                    ChkOcrNums.IsChecked = _step.OcrNumbersOnly;
+                    ChkReuseOcrRoi.IsChecked = _step.ReuseOcrOnRoiUnchanged;
                     PanelDwell.Visibility = Visibility.Visible; // Dwell is reused as dwell time after ocr? No, in RunScript it's not used for OCR usually but let's keep it if logic uses it. Checked RunScript: OCR doesn't use DwellMs.
                     PanelDwell.Visibility = Visibility.Collapsed;
                     break;
@@ -71,7 +76,14 @@ namespace WindowSpy
                     break;
                 case ActionType.Expression:
                     PanelPattern.Visibility = Visibility.Visible;
+                    TxtExprHelp.Visibility = Visibility.Visible;
                     PanelJump.Visibility = Visibility.Visible;
+                    LblPattern.Text = "表达式:";
+                    break;
+                case ActionType.IfStart:
+                case ActionType.ElseIf:
+                    PanelPattern.Visibility = Visibility.Visible;
+                    TxtExprHelp.Visibility = Visibility.Visible;
                     LblPattern.Text = "表达式:";
                     break;
                 case ActionType.Save:
@@ -85,6 +97,65 @@ namespace WindowSpy
                 case ActionType.BringFront:
                     // Only Delay
                     break;
+            }
+        }
+
+        private void BtnPickPoint_Click(object sender, RoutedEventArgs e)
+        {
+            if (Owner is not MainWindow main) return;
+            var hwnd = main.GetBoundHwnd(_step.Target);
+            if (hwnd == IntPtr.Zero)
+            {
+                MessageBox.Show($"{_step.Target}窗口未绑定", "提示");
+                return;
+            }
+            
+            var picker = new OverlayPickWindow();
+            if (picker.ShowDialog() == true)
+            {
+                var wrect = NativeMethods.GetRect(hwnd);
+                int sx = (int)picker.ClickPoint.X;
+                int sy = (int)picker.ClickPoint.Y;
+                if (sx < wrect.Left || sy < wrect.Top || sx >= wrect.Right || sy >= wrect.Bottom)
+                {
+                    MessageBox.Show("点击位置不在目标窗口内", "提示");
+                    return;
+                }
+                TxtPointX.Text = (sx - wrect.Left).ToString();
+                TxtPointY.Text = (sy - wrect.Top).ToString();
+            }
+        }
+
+        private void BtnSelectRect_Click(object sender, RoutedEventArgs e)
+        {
+            if (Owner is not MainWindow main) return;
+            var hwnd = main.GetBoundHwnd(_step.Target);
+            if (hwnd == IntPtr.Zero)
+            {
+                MessageBox.Show($"{_step.Target}窗口未绑定", "提示");
+                return;
+            }
+
+            var overlay = new OverlaySelectWindow();
+            if (overlay.ShowDialog() == true)
+            {
+                var sel = overlay.SelectedRect;
+                var wrect = NativeMethods.GetRect(hwnd);
+                var interLeft = Math.Max(wrect.Left, (int)sel.Left);
+                var interTop = Math.Max(wrect.Top, (int)sel.Top);
+                var interRight = Math.Min(wrect.Right, (int)(sel.Left + sel.Width));
+                var interBottom = Math.Min(wrect.Bottom, (int)(sel.Top + sel.Height));
+
+                if (interRight <= interLeft || interBottom <= interTop)
+                {
+                    MessageBox.Show("选择区域不在目标窗口内", "提示");
+                    return;
+                }
+                
+                TxtRectX.Text = (interLeft - wrect.Left).ToString();
+                TxtRectY.Text = (interTop - wrect.Top).ToString();
+                TxtRectW.Text = (interRight - interLeft).ToString();
+                TxtRectH.Text = (interBottom - interTop).ToString();
             }
         }
 
@@ -110,6 +181,8 @@ namespace WindowSpy
             _step.Pattern = TxtPattern.Text;
             _step.Key = TxtKey.Text;
             _step.JumpOnTrue = ChkJump.IsChecked == true;
+            _step.OcrNumbersOnly = ChkOcrNums.IsChecked == true;
+            _step.ReuseOcrOnRoiUnchanged = ChkReuseOcrRoi.IsChecked == true;
 
             DialogResult = true;
             Close();

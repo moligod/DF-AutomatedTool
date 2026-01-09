@@ -7,15 +7,10 @@ class PredictBase(object):
     def get_onnx_session(self, model_dir, use_gpu, gpu_id = 0):
         # 使用gpu
         if use_gpu:
-            # 排除 TensorrtExecutionProvider，避免构建引擎耗时过长
-            # 优先使用 CUDA，其次 CPU。不使用 DML，因为可能导致冲突。
+            # 优先使用 DirectML，其次 CPU
             providers = [
-                ('CUDAExecutionProvider', {
-                    "cudnn_conv_algo_search": "DEFAULT", 
+                ('DmlExecutionProvider', {
                     "device_id": gpu_id,
-                    "arena_extend_strategy": "kNextPowerOfTwo",
-                    "gpu_mem_limit": 2 * 1024 * 1024 * 1024, # Limit to 2GB to be safe
-                    "do_copy_in_default_stream": True,
                 }),
                 'CPUExecutionProvider'
             ]

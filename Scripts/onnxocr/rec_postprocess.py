@@ -202,7 +202,7 @@ class AttnLabelDecode(BaseRecLabelDecode):
             label = self.decode(label, is_remove_duplicate=False)
             return text, label
         """
-        if isinstance(preds, paddle.Tensor):
+        if paddle and isinstance(preds, paddle.Tensor):
             preds = preds.numpy()
 
         preds_idx = preds.argmax(axis=2)
@@ -529,7 +529,7 @@ class SARLabelDecode(BaseRecLabelDecode):
         return result_list
 
     def __call__(self, preds, label=None, *args, **kwargs):
-        if isinstance(preds, paddle.Tensor):
+        if paddle and isinstance(preds, paddle.Tensor):
             preds = preds.numpy()
         preds_idx = preds.argmax(axis=2)
         preds_prob = preds.max(axis=2)

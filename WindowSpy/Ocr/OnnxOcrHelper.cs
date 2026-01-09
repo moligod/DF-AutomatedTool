@@ -134,7 +134,7 @@ public class OnnxOcrHelper : IDisposable
         psi.EnvironmentVariables["PYTHONIOENCODING"] = "utf-8";
         psi.EnvironmentVariables["ONNX_USE_GPU"] = _useGpu ? "1" : "0"; 
         
-        // 关键修复：将程序根目录添加到 PATH，确保 bundled DLLs (CUDA/cuDNN) 能被找到
+        // 关键修复：将程序根目录添加到 PATH，确保 bundled DLLs 能被找到
         string baseDir = AppDomain.CurrentDomain.BaseDirectory;
         string scriptsDir = Path.Combine(baseDir, "Scripts");
         // 针对 PyInstaller _internal 目录的特殊处理 (如果存在)
@@ -149,8 +149,6 @@ public class OnnxOcrHelper : IDisposable
         var paths = new List<string> { baseDir, scriptsDir, internalDir, internalDir2, currentPath };
         psi.EnvironmentVariables["PATH"] = string.Join(Path.PathSeparator.ToString(), paths);
         
-        psi.EnvironmentVariables["CUDNN_PATH"] = baseDir; // 某些版本的ORT可能检查此变量
-
         _process = Process.Start(psi);
         if (_process == null) throw new Exception("Failed to start python process");
 
@@ -229,30 +227,28 @@ public class OnnxOcrHelper : IDisposable
 
     public async Task<List<OcrRegion>> OcrAsync(Mat src)
     {
-        var tmpFile = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "linshijietu", $"{Guid.NewGuid()}.png");
-        try { Directory.CreateDirectory(Path.GetDirectoryName(tmpFile)!); } catch { }
-        
+        byte[] imgBytes;
+        // Use .bmp for faster encoding (no compression) compared to .png
+        Cv2.ImEncode(".bmp", src, out imgBytes);
+        string base64Str = Convert.ToBase64String(imgBytes);
+
+        await _semaphore.WaitAsync();
         try
         {
-            Cv2.ImWrite(tmpFile, src);
-            
-            await _semaphore.WaitAsync();
-            try
+            // 如果进程不存在，先启动并等待预热完成
+            if (_process == null || _process.HasExited)
             {
-                // 如果进程不存在，先启动并等待预热完成
-                if (_process == null || _process.HasExited)
-                {
-                    Log("[C# Info] Starting OCR engine (this may take a few seconds for GPU warmup)...");
-                    await EnsureProcessStartedAsync();
-                }
-                
-                if (_process == null) throw new Exception("Process is null");
+                Log("[C# Info] Starting OCR engine (this may take a few seconds for GPU warmup)...");
+                await EnsureProcessStartedAsync();
+            }
+            
+            if (_process == null) throw new Exception("Process is null");
 
-                // 增加日志：发送图像路径给Python
-                Log($"[C# Info] Sending image to Python: {tmpFile}");
+            // 增加日志：发送图像路径给Python
+            Log($"[C# Info] Sending image to Python via Memory (Base64 len: {base64Str.Length})");
 
-                await _process.StandardInput.WriteLineAsync(tmpFile);
-                await _process.StandardInput.FlushAsync();
+            await _process.StandardInput.WriteLineAsync("base64:" + base64Str);
+            await _process.StandardInput.FlushAsync();
                 
                 var readTask = _process.StandardOutput.ReadLineAsync();
                 var timeoutTask = Task.Delay(TimeSpan.FromSeconds(120)); 
@@ -342,14 +338,6 @@ public class OnnxOcrHelper : IDisposable
             {
                 _semaphore.Release();
             }
-        }
-        finally
-        {
-            if (File.Exists(tmpFile))
-            {
-                try { File.Delete(tmpFile); } catch {}
-            }
-        }
     }
 
     public void Dispose()
