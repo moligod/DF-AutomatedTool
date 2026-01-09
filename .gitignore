@@ -43,3 +43,9 @@ WindowSpy/steps*.json
 Scripts/*.dll
 Scripts/onnxruntime-win-x64-gpu-*/
 Scripts/dist/
+
+# Packaging artifacts
+Publish_Standalone/
+_publish_out/
+_repack_tmp_*/
+*.zip

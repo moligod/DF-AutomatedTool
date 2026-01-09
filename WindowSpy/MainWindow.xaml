@@ -74,52 +74,35 @@
                             <TextBlock Margin="0,0,12,0" VerticalAlignment="Center" Text="A识别结果：" />
                             <TextBlock x:Name="OcrResultTextA" Width="220" VerticalAlignment="Center" Text="" />
                         </StackPanel>
-                        <Grid Margin="0,8,0,0">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="Auto"/>
-                                <ColumnDefinition Width="Auto"/>
-                            </Grid.ColumnDefinitions>
-                            <Grid.RowDefinitions>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="Auto"/>
-                            </Grid.RowDefinitions>
-                            <Button Grid.Row="0" Grid.Column="0" x:Name="SelectAreaButtonA" Content="选择A识别区域" Width="120" Height="32" Margin="0,0,8,8" Click="SelectAreaButtonA_Click"/>
-                            <Button Grid.Row="0" Grid.Column="1" x:Name="ShotButtonA" Content="识别A并保存" Width="120" Height="32" Margin="0,0,0,8" Click="ShotButtonA_Click"/>
-                            <Button Grid.Row="1" Grid.Column="0" x:Name="SelectClickPosA" Content="选择A点击位置" Width="120" Height="32" Margin="0,0,8,8" Click="SelectClickPosA_Click"/>
-                            <Button Grid.Row="1" Grid.Column="1" x:Name="ClickSelectedPosA" Content="点击A选择位置" Width="120" Height="32" Margin="0,0,0,8" Click="ClickSelectedPosA_Click"/>
-                            <StackPanel Grid.Row="2" Grid.Column="0" Orientation="Vertical" Margin="0,0,8,8">
-                                <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
-                                    <TextBlock Margin="0,0,4,0" VerticalAlignment="Center" Text="延迟(ms)"/>
-                                    <TextBox x:Name="DelayMsA" Width="50" Height="28" VerticalAlignment="Center" Text="300" VerticalContentAlignment="Center" ToolTip="执行此步骤前的固定延迟时间(ms)"/>
-                                    <TextBlock Margin="4,0,4,0" VerticalAlignment="Center" Text="±"/>
-                                    <TextBox x:Name="RandomDelayA" Width="40" Height="28" VerticalAlignment="Center" Text="0" VerticalContentAlignment="Center" ToolTip="设置随机偏差范围，例如填50表示在基准值上下50ms内波动 (±50)"/>
-                                </StackPanel>
-                                <StackPanel Orientation="Horizontal">
-                                    <TextBlock Margin="0,0,4,0" VerticalAlignment="Center" Text="随机偏移(px)"/>
-                                    <TextBox x:Name="RandomXA" Width="50" Height="28" VerticalAlignment="Center" Text="0" VerticalContentAlignment="Center" ToolTip="设置点击位置的随机偏差(像素)。例如填10，则X坐标在 ±10 范围内波动"/>
-                                    <TextBlock Margin="4,0,4,0" VerticalAlignment="Center" Text="x"/>
-                                    <TextBox x:Name="RandomYA" Width="40" Height="28" VerticalAlignment="Center" Text="0" VerticalContentAlignment="Center" ToolTip="设置点击位置的随机偏差(像素)。例如填10，则Y坐标在 ±10 范围内波动"/>
-                                </StackPanel>
-                            </StackPanel>
-                            <StackPanel Grid.Row="2" Grid.Column="1" Orientation="Vertical" Margin="0,0,0,8">
-                                <StackPanel Orientation="Horizontal">
-                                    <TextBlock Margin="0,0,4,0" VerticalAlignment="Center" Text="停留(ms)"/>
-                                    <TextBox x:Name="DwellMsA" Width="50" Height="28" VerticalAlignment="Center" Text="100" VerticalContentAlignment="Center" ToolTip="鼠标点击后按住停留的时间(ms)"/>
-                                    <TextBlock Margin="4,0,4,0" VerticalAlignment="Center" Text="±"/>
-                                    <TextBox x:Name="RandomDwellA" Width="40" Height="28" VerticalAlignment="Center" Text="0" VerticalContentAlignment="Center" ToolTip="设置随机偏差范围，例如填50表示在基准值上下50ms内波动 (±50)"/>
-                                </StackPanel>
-                            </StackPanel>
-                            <StackPanel Grid.Row="3" Grid.Column="0" Orientation="Horizontal">
+                        <StackPanel Margin="0,8,0,0">
+                            <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                                <Button x:Name="SelectAreaButtonA" Content="选择A识别区域" Width="120" Height="32" Margin="0,0,8,0" Click="SelectAreaButtonA_Click"/>
                                 <Button Content="添加A识别步骤" Width="120" Height="32" Margin="0,0,8,0" Click="AddOcrStepA_Click"/>
+                                <Button x:Name="ShotButtonA" Content="识别A并保存" Width="120" Height="32" Margin="0,0,8,0" Click="ShotButtonA_Click"/>
                                 <CheckBox x:Name="OcrAOnlyNums" Content="只识别数字" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                <CheckBox x:Name="ReuseOcrRoiCacheCheck" Content="ROI未变化复用OCR结果" VerticalAlignment="Center" Margin="0,0,8,0" ToolTip="开启后：识别区域画面判定未变化时，将直接复用上次OCR文本以提速；仍可能存在极小概率漏判变化，建议仅在画面变化明显的场景使用"/>
                             </StackPanel>
-                            <StackPanel Grid.Row="3" Grid.Column="1" Orientation="Horizontal">
+                            <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                                <Button x:Name="SelectClickPosA" Content="选择A点击位置" Width="120" Height="32" Margin="0,0,8,0" Click="SelectClickPosA_Click"/>
                                 <Button Content="添加A点击步骤" Width="120" Height="32" Margin="0,0,8,0" Click="AddClickStepA_Click"/>
+                                <Button x:Name="ClickSelectedPosA" Content="点击A选择位置" Width="120" Height="32" Margin="0,0,8,0" Click="ClickSelectedPosA_Click"/>
                                 <Button Content="添加置顶A步骤" Width="120" Height="32" Margin="0,0,8,0" Click="AddBringFrontA_Click"/>
                             </StackPanel>
-                        </Grid>
+                            <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                                <TextBlock Margin="0,0,4,0" VerticalAlignment="Center" Text="鼠标随机偏移(px)"/>
+                                <TextBox x:Name="RandomXA" Width="50" Height="28" VerticalAlignment="Center" Text="0" VerticalContentAlignment="Center" ToolTip="设置点击位置的随机偏差(像素)。例如填10，则X坐标在 ±10 范围内波动"/>
+                                <TextBlock Margin="4,0,4,0" VerticalAlignment="Center" Text="x"/>
+                                <TextBox x:Name="RandomYA" Width="50" Height="28" VerticalAlignment="Center" Text="0" VerticalContentAlignment="Center" ToolTip="设置点击位置的随机偏差(像素)。例如填10，则Y坐标在 ±10 范围内波动"/>
+                                <TextBlock Margin="16,0,4,0" VerticalAlignment="Center" Text="延迟(ms)"/>
+                                <TextBox x:Name="DelayMsA" Width="50" Height="28" VerticalAlignment="Center" Text="300" VerticalContentAlignment="Center" ToolTip="执行此步骤前的固定延迟时间(ms)"/>
+                                <TextBlock Margin="4,0,4,0" VerticalAlignment="Center" Text="±"/>
+                                <TextBox x:Name="RandomDelayA" Width="40" Height="28" VerticalAlignment="Center" Text="0" VerticalContentAlignment="Center" ToolTip="设置随机偏差范围，例如填50表示在基准值上下50ms内波动 (±50)"/>
+                                <TextBlock Margin="16,0,4,0" VerticalAlignment="Center" Text="停留(ms)"/>
+                                <TextBox x:Name="DwellMsA" Width="50" Height="28" VerticalAlignment="Center" Text="100" VerticalContentAlignment="Center" ToolTip="鼠标点击后按住停留的时间(ms)"/>
+                                <TextBlock Margin="4,0,4,0" VerticalAlignment="Center" Text="±"/>
+                                <TextBox x:Name="RandomDwellA" Width="40" Height="28" VerticalAlignment="Center" Text="0" VerticalContentAlignment="Center" ToolTip="设置随机偏差范围，例如填50表示在基准值上下50ms内波动 (±50)"/>
+                            </StackPanel>
+                        </StackPanel>
                 </StackPanel>
             </TabItem>
             <TabItem Header="B操作">
@@ -128,52 +111,35 @@
                             <TextBlock Margin="0,0,12,0" VerticalAlignment="Center" Text="B识别结果：" />
                             <TextBlock x:Name="OcrResultTextB" Width="220" VerticalAlignment="Center" Text="" />
                         </StackPanel>
-                        <Grid Margin="0,8,0,0">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="Auto"/>
-                                <ColumnDefinition Width="Auto"/>
-                            </Grid.ColumnDefinitions>
-                            <Grid.RowDefinitions>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="Auto"/>
-                            </Grid.RowDefinitions>
-                            <Button Grid.Row="0" Grid.Column="0" x:Name="SelectAreaButtonB" Content="选择B识别区域" Width="120" Height="32" Margin="0,0,8,8" Click="SelectAreaButtonB_Click"/>
-                            <Button Grid.Row="0" Grid.Column="1" x:Name="ShotButtonB" Content="识别B并保存" Width="120" Height="32" Margin="0,0,0,8" Click="ShotButtonB_Click"/>
-                            <Button Grid.Row="1" Grid.Column="0" x:Name="SelectClickPosB" Content="选择B点击位置" Width="120" Height="32" Margin="0,0,8,8" Click="SelectClickPosB_Click"/>
-                            <Button Grid.Row="1" Grid.Column="1" x:Name="ClickSelectedPosB" Content="点击B选择位置" Width="120" Height="32" Margin="0,0,0,8" Click="ClickSelectedPosB_Click"/>
-                            <StackPanel Grid.Row="2" Grid.Column="0" Orientation="Vertical" Margin="0,0,8,8">
-                                <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
-                                    <TextBlock Margin="0,0,4,0" VerticalAlignment="Center" Text="延迟(ms)"/>
-                                    <TextBox x:Name="DelayMsB" Width="50" Height="28" VerticalAlignment="Center" Text="300" VerticalContentAlignment="Center" ToolTip="执行此步骤前的固定延迟时间(ms)"/>
-                                    <TextBlock Margin="4,0,4,0" VerticalAlignment="Center" Text="±"/>
-                                    <TextBox x:Name="RandomDelayB" Width="40" Height="28" VerticalAlignment="Center" Text="0" VerticalContentAlignment="Center" ToolTip="设置随机偏差范围，例如填50表示在基准值上下50ms内波动 (±50)"/>
-                                </StackPanel>
-                                <StackPanel Orientation="Horizontal">
-                                    <TextBlock Margin="0,0,4,0" VerticalAlignment="Center" Text="随机偏移(px)"/>
-                                    <TextBox x:Name="RandomXB" Width="50" Height="28" VerticalAlignment="Center" Text="0" VerticalContentAlignment="Center" ToolTip="设置点击位置的随机偏差(像素)。例如填10，则X坐标在 ±10 范围内波动"/>
-                                    <TextBlock Margin="4,0,4,0" VerticalAlignment="Center" Text="x"/>
-                                    <TextBox x:Name="RandomYB" Width="40" Height="28" VerticalAlignment="Center" Text="0" VerticalContentAlignment="Center" ToolTip="设置点击位置的随机偏差(像素)。例如填10，则Y坐标在 ±10 范围内波动"/>
-                                </StackPanel>
-                            </StackPanel>
-                            <StackPanel Grid.Row="2" Grid.Column="1" Orientation="Vertical" Margin="0,0,0,8">
-                                <StackPanel Orientation="Horizontal">
-                                    <TextBlock Margin="0,0,4,0" VerticalAlignment="Center" Text="停留(ms)"/>
-                                    <TextBox x:Name="DwellMsB" Width="50" Height="28" VerticalAlignment="Center" Text="100" VerticalContentAlignment="Center" ToolTip="鼠标点击后按住停留的时间(ms)"/>
-                                    <TextBlock Margin="4,0,4,0" VerticalAlignment="Center" Text="±"/>
-                                    <TextBox x:Name="RandomDwellB" Width="40" Height="28" VerticalAlignment="Center" Text="0" VerticalContentAlignment="Center" ToolTip="设置随机偏差范围，例如填50表示在基准值上下50ms内波动 (±50)"/>
-                                </StackPanel>
-                            </StackPanel>
-                            <StackPanel Grid.Row="3" Grid.Column="0" Orientation="Horizontal">
+                        <StackPanel Margin="0,8,0,0">
+                            <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                                <Button x:Name="SelectAreaButtonB" Content="选择B识别区域" Width="120" Height="32" Margin="0,0,8,0" Click="SelectAreaButtonB_Click"/>
                                 <Button Content="添加B识别步骤" Width="120" Height="32" Margin="0,0,8,0" Click="AddOcrStepB_Click"/>
+                                <Button x:Name="ShotButtonB" Content="识别B并保存" Width="120" Height="32" Margin="0,0,8,0" Click="ShotButtonB_Click"/>
                                 <CheckBox x:Name="OcrBOnlyNums" Content="只识别数字" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                <CheckBox Content="ROI未变化复用OCR结果" VerticalAlignment="Center" Margin="0,0,8,0" IsChecked="{Binding ElementName=ReuseOcrRoiCacheCheck, Path=IsChecked, Mode=TwoWay}" ToolTip="开启后：识别区域画面判定未变化时，将直接复用上次OCR文本以提速；与A操作共用此设置"/>
                             </StackPanel>
-                            <StackPanel Grid.Row="3" Grid.Column="1" Orientation="Horizontal">
+                            <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                                <Button x:Name="SelectClickPosB" Content="选择B点击位置" Width="120" Height="32" Margin="0,0,8,0" Click="SelectClickPosB_Click"/>
                                 <Button Content="添加B点击步骤" Width="120" Height="32" Margin="0,0,8,0" Click="AddClickStepB_Click"/>
-                                <Button Content="添加置顶B步骤" Width="120" Height="32" Click="AddBringFrontB_Click"/>
+                                <Button x:Name="ClickSelectedPosB" Content="点击B选择位置" Width="120" Height="32" Margin="0,0,8,0" Click="ClickSelectedPosB_Click"/>
+                                <Button Content="添加置顶B步骤" Width="120" Height="32" Margin="0,0,8,0" Click="AddBringFrontB_Click"/>
                             </StackPanel>
-                        </Grid>
+                            <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                                <TextBlock Margin="0,0,4,0" VerticalAlignment="Center" Text="鼠标随机偏移(px)"/>
+                                <TextBox x:Name="RandomXB" Width="50" Height="28" VerticalAlignment="Center" Text="0" VerticalContentAlignment="Center" ToolTip="设置点击位置的随机偏差(像素)。例如填10，则X坐标在 ±10 范围内波动"/>
+                                <TextBlock Margin="4,0,4,0" VerticalAlignment="Center" Text="x"/>
+                                <TextBox x:Name="RandomYB" Width="50" Height="28" VerticalAlignment="Center" Text="0" VerticalContentAlignment="Center" ToolTip="设置点击位置的随机偏差(像素)。例如填10，则Y坐标在 ±10 范围内波动"/>
+                                <TextBlock Margin="16,0,4,0" VerticalAlignment="Center" Text="延迟(ms)"/>
+                                <TextBox x:Name="DelayMsB" Width="50" Height="28" VerticalAlignment="Center" Text="300" VerticalContentAlignment="Center" ToolTip="执行此步骤前的固定延迟时间(ms)"/>
+                                <TextBlock Margin="4,0,4,0" VerticalAlignment="Center" Text="±"/>
+                                <TextBox x:Name="RandomDelayB" Width="40" Height="28" VerticalAlignment="Center" Text="0" VerticalContentAlignment="Center" ToolTip="设置随机偏差范围，例如填50表示在基准值上下50ms内波动 (±50)"/>
+                                <TextBlock Margin="16,0,4,0" VerticalAlignment="Center" Text="停留(ms)"/>
+                                <TextBox x:Name="DwellMsB" Width="50" Height="28" VerticalAlignment="Center" Text="100" VerticalContentAlignment="Center" ToolTip="鼠标点击后按住停留的时间(ms)"/>
+                                <TextBlock Margin="4,0,4,0" VerticalAlignment="Center" Text="±"/>
+                                <TextBox x:Name="RandomDwellB" Width="40" Height="28" VerticalAlignment="Center" Text="0" VerticalContentAlignment="Center" ToolTip="设置随机偏差范围，例如填50表示在基准值上下50ms内波动 (±50)"/>
+                            </StackPanel>
+                        </StackPanel>
                 </StackPanel>
             </TabItem>
             <TabItem Header="条件">
@@ -210,7 +176,7 @@
                             <Button Content="添加 If" Width="80" Height="28" Click="AddIfStep_Click" ToolTip="添加 If 开始块 (使用上方表达式)"/>
                             <Button Content="添加 ElseIf" Width="80" Height="28" Margin="8,0,0,0" Click="AddElseIfStep_Click" ToolTip="添加 ElseIf 块 (使用上方表达式)"/>
                             <Button Content="添加 Else" Width="80" Height="28" Margin="8,0,0,0" Click="AddElseStep_Click" ToolTip="添加 Else 块 (无条件)"/>
-                            <Button Content="添加 EndIf" Width="80" Height="28" Margin="8,0,0,0" Click="AddEndIfStep_Click" ToolTip="添加 EndIf 结束块"/>
+                            <Button Content="添加结束if" Width="80" Height="28" Margin="8,0,0,0" Click="AddEndIfStep_Click" ToolTip="添加 EndIf 结束块"/>
                             <Button Content="跳出If/Else" Width="90" Height="28" Margin="8,0,0,0" Click="AddBreakBlock_Click" ToolTip="跳出当前的 If/ElseIf/Else 块 (跳转到 EndIf 后)"/>
                         </StackPanel>
                     </Grid>
@@ -257,7 +223,8 @@
                     <WrapPanel Margin="0,0,0,8">
                         <TextBlock Margin="0,0,4,0" VerticalAlignment="Center" Text="步骤队列执行次数"/>
                         <TextBox x:Name="LoopCount" Width="60" Height="28" VerticalAlignment="Center" Text="1" VerticalContentAlignment="Center" ToolTip="整个脚本列表的重复执行次数"/>
-                        <CheckBox x:Name="BreakOnEmpty" Content="识别为空则(防止脚本异常点击无法暂停)" Margin="12,0,0,0" VerticalAlignment="Center" ToolTip="如果勾选，当任何识别步骤(OCR)的结果为空时，将立即停止整个脚本的运行"/>
+                        <CheckBox x:Name="BreakOnEmpty" Content="识别为空则(防止步骤队列死循环无法暂停)" Margin="12,0,0,0" VerticalAlignment="Center" ToolTip="如果勾选，当任何识别步骤(OCR)的结果为空时，将立即停止整个脚本的运行"/>
+                        <CheckBox x:Name="FailSafeCheck" Content="防卡死(5秒内右键10次)" IsChecked="True" VerticalAlignment="Center" Margin="8,0,0,0" ToolTip="启用后，5秒内连续点击鼠标右键10次可强制停止脚本"/>
                     </WrapPanel>
                     <WrapPanel Margin="0,0,0,8">
                         <Button Content="执行全部步骤" Width="120" Height="32" Click="RunScriptAll_Click"/>
@@ -268,9 +235,8 @@
                     <WrapPanel>
                         <Button Content="保存队列" Width="100" Height="32" Click="SaveSteps_Click"/>
                         <Button Content="加载队列" Width="100" Height="32" Margin="8,0,0,0" Click="LoadSteps_Click"/>
-                        <CheckBox x:Name="FailSafeCheck" Content="防卡死(5秒内右键10次)" IsChecked="True" VerticalAlignment="Center" Margin="8,0,0,0" ToolTip="启用后，5秒内连续点击鼠标右键10次可强制停止脚本"/>
-                        <CheckBox x:Name="UseGpuCheck" Content="启用GPU加速" IsChecked="True" VerticalAlignment="Center" Margin="8,0,0,0" ToolTip="勾选：尝试使用显卡加速(需要环境支持)；不勾选：强制使用CPU"/>
-                        <CheckBox x:Name="ReuseOcrRoiCacheCheck" Content="ROI未变化复用OCR结果" VerticalAlignment="Center" Margin="8,0,0,0" ToolTip="开启后：识别区域画面判定未变化时，将直接复用上次OCR文本以提速；仍可能存在极小概率漏判变化，建议仅在画面变化明显的场景使用"/>
+                        <CheckBox x:Name="UseGpuCheck" Content="启动GPU加速(可在输出日志测试识别速度后选择是否启动GPU加速)" IsChecked="True" VerticalAlignment="Center" Margin="8,0,0,0" ToolTip="勾选：尝试使用显卡加速(需要环境支持)；不勾选：强制使用CPU"/>
+
                     </WrapPanel>
                 </StackPanel>
             </TabItem>
@@ -296,9 +262,13 @@
             </TabItem>
         </TabControl>
 
-        <StackPanel Grid.Row="0" Grid.Column="1" Grid.RowSpan="3" Margin="8,0,0,0">
-            <TextBlock Text="步骤队列（拖拽调整顺序，右键编辑）：" FontWeight="Bold" />
-            <ListBox x:Name="StepsList" Height="500" AllowDrop="True"
+        <Grid Grid.Row="0" Grid.Column="1" Grid.RowSpan="3" Margin="8,0,0,0">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
+            <TextBlock Grid.Row="0" Text="步骤队列（拖拽调整顺序，右键编辑）：" FontWeight="Bold" />
+            <ListBox Grid.Row="1" x:Name="StepsList" AllowDrop="True"
                      PreviewMouseLeftButtonDown="StepsList_PreviewMouseLeftButtonDown"
                      Drop="StepsList_Drop"
                      DragOver="StepsList_DragOver"
@@ -310,14 +280,14 @@
                     </ContextMenu>
                 </ListBox.ContextMenu>
             </ListBox>
-        </StackPanel>
+        </Grid>
 
         <StackPanel Grid.Row="3" Grid.Column="0" Orientation="Vertical" Margin="0,8,0,0">
             <TextBlock Text="输出日志：" FontWeight="Bold"/>
             <Grid>
                 <TextBox x:Name="OutputBox" Height="110" IsReadOnly="True" TextWrapping="Wrap"
                          VerticalScrollBarVisibility="Auto" FontFamily="Consolas"/>
-                <Button Content="复制全部日志" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,4,20,0" Padding="8,2" Click="CopyLog_Click" Opacity="0.8"/>
+                <Button Content="复制全部日志" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,2,2,0" Padding="8,2" Click="CopyLog_Click" Opacity="0.8"/>
             </Grid>
         </StackPanel>
         <StackPanel Grid.Row="3" Grid.Column="1" Orientation="Vertical" Margin="8,8,0,0">

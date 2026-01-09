@@ -10,6 +10,7 @@ using Microsoft.Win32;
 using System.Text.Json;
 using System.Security.Cryptography;
 using System.Runtime.InteropServices;
+using System.Threading;
 using OpenCvSharp;
 using OpenCvSharp.Extensions;
 using WindowSpy.Ocr;
@@ -56,6 +57,7 @@ namespace WindowSpy
         private bool _exprLogFlushScheduled = false;
 
         private readonly System.Collections.Generic.Dictionary<ScriptStep, OcrRoiCacheEntry> _ocrRoiCache = new();
+        private int _firstInferenceHintLogged = 0;
 
         public MainWindow()
         {
@@ -135,6 +137,11 @@ namespace WindowSpy
 
         private string PerformOcrInternal(ScriptStep step, Mat matRoi)
         {
+            if (Interlocked.Exchange(ref _firstInferenceHintLogged, 1) == 0)
+            {
+                AppendLog("提示：首次推理识别会慢很多，这属于正常现象");
+            }
+
             var regions = _ocr.OcrAsync(matRoi).GetAwaiter().GetResult();
             var texts = regions.Select(z => z.Text ?? "").ToList();
             if (step.OcrNumbersOnly)
