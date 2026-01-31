@@ -37,7 +37,7 @@
 
         <!-- Click: Dwell -->
         <DockPanel Margin="0,5" x:Name="PanelDwell">
-            <TextBlock Text="停留(ms):" Width="100" VerticalAlignment="Center"/>
+            <TextBlock x:Name="LblDwell" Text="停留(ms):" Width="100" VerticalAlignment="Center"/>
             <TextBox x:Name="TxtDwell" Width="60" Height="26" VerticalContentAlignment="Center"/>
             <TextBlock Text="±" Margin="5,0,5,0" VerticalAlignment="Center"/>
             <TextBox x:Name="TxtRandomDwell" Width="50" Height="26" VerticalContentAlignment="Center" ToolTip="随机偏差范围 (±值)"/>
@@ -89,13 +89,32 @@
 
         <!-- Save/Condition: Key -->
         <DockPanel Margin="0,5" x:Name="PanelKey">
-            <TextBlock Text="变量键名:" Width="100" VerticalAlignment="Center"/>
+            <TextBlock x:Name="LblKey" Text="变量键名:" Width="100" VerticalAlignment="Center"/>
+            <Button x:Name="BtnIdentifyKey" Content="识别按键" Width="70" Margin="0,0,5,0" Click="BtnIdentifyKey_Click" Visibility="Collapsed"/>
             <TextBox x:Name="TxtKey" Height="26" VerticalContentAlignment="Center"/>
         </DockPanel>
         
         <!-- Condition/Expression: Jump -->
         <DockPanel Margin="0,5" x:Name="PanelJump">
              <CheckBox x:Name="ChkJump" Content="条件满足则跳出" VerticalAlignment="Center"/>
+        </DockPanel>
+
+        <!-- Network -->
+        <DockPanel Margin="0,5" x:Name="PanelNetwork">
+            <StackPanel Orientation="Vertical">
+                <DockPanel Margin="0,0,0,5">
+                    <TextBlock Text="网卡名称:" Width="100" VerticalAlignment="Center"/>
+                    <ComboBox x:Name="CmbNetworkAdapter" Height="26" VerticalContentAlignment="Center" IsEditable="True"/>
+                </DockPanel>
+                <DockPanel>
+                    <TextBlock Text="操作:" Width="100" VerticalAlignment="Center"/>
+                    <ComboBox x:Name="CmbNetworkAction" Height="26" VerticalContentAlignment="Center">
+                        <ComboBoxItem Content="断开"/>
+                        <ComboBoxItem Content="恢复"/>
+                    </ComboBox>
+                </DockPanel>
+                <CheckBox x:Name="ChkNetworkSync" Content="同步执行 (等待操作完成)" Margin="100,5,0,0"/>
+            </StackPanel>
         </DockPanel>
 
         <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,15,0,0">

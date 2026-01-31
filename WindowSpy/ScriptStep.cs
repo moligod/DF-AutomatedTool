@@ -3,7 +3,7 @@ using System.Drawing;
 
 namespace WindowSpy
 {
-    public enum ActionType { Click, Ocr, Condition, Save, Expression, LoopStart, LoopEnd, BringFront, KeyPress, IfStart, ElseIf, Else, EndIf, BreakLoop, ContinueLoop, Goto, Label, BreakBlock }
+    public enum ActionType { Click, Ocr, Condition, Save, Expression, LoopStart, LoopEnd, BringFront, KeyPress, IfStart, ElseIf, Else, EndIf, BreakLoop, ContinueLoop, Goto, Label, BreakBlock, Network, Comment }
     public enum TargetType { A, B }
 
     public class ScriptStep
@@ -25,5 +25,8 @@ namespace WindowSpy
         public bool JumpOnTrue { get; set; } = false;
         public bool OcrNumbersOnly { get; set; } = false;
         public bool ReuseOcrOnRoiUnchanged { get; set; } = false;
+        public string NetworkAdapterName { get; set; } = "";
+        public bool NetworkEnable { get; set; } = false;
+        public bool NetworkSync { get; set; } = false;
     }
 }

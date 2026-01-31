@@ -6,11 +6,15 @@ namespace WindowSpy
     public partial class EditStepWindow : Window
     {
         private ScriptStep _step;
+        private System.Collections.Generic.List<string>? _adapters;
+        private bool _identifyingKey = false;
 
-        public EditStepWindow(ScriptStep step)
+        public EditStepWindow(ScriptStep step, System.Collections.Generic.List<string>? adapters = null)
         {
             InitializeComponent();
             _step = step;
+            _adapters = adapters;
+            this.PreviewKeyDown += EditStepWindow_PreviewKeyDown;
             LoadData();
         }
 
@@ -35,6 +39,13 @@ namespace WindowSpy
             TxtPattern.Text = _step.Pattern;
             TxtKey.Text = _step.Key;
             ChkJump.IsChecked = _step.JumpOnTrue;
+            CmbNetworkAdapter.Text = _step.NetworkAdapterName;
+            CmbNetworkAction.SelectedIndex = _step.NetworkEnable ? 1 : 0;
+            ChkNetworkSync.IsChecked = _step.NetworkSync;
+            
+            // Reset Labels
+            LblKey.Text = "变量键名:";
+            LblDwell.Text = "停留(ms):";
 
             // Visibility Logic
             PanelDelay.Visibility = Visibility.Collapsed;
@@ -47,6 +58,7 @@ namespace WindowSpy
             TxtExprHelp.Visibility = Visibility.Collapsed;
             PanelKey.Visibility = Visibility.Collapsed;
             PanelJump.Visibility = Visibility.Collapsed;
+            PanelNetwork.Visibility = Visibility.Collapsed;
 
             // Common for most actions
             if (_step.Type != ActionType.LoopEnd)
@@ -97,6 +109,37 @@ namespace WindowSpy
                 case ActionType.BringFront:
                     // Only Delay
                     break;
+                case ActionType.Comment:
+                    PanelPattern.Visibility = Visibility.Visible;
+                    LblPattern.Text = "注释内容:";
+                    break;
+                case ActionType.KeyPress:
+                    PanelKey.Visibility = Visibility.Visible;
+                    BtnIdentifyKey.Visibility = Visibility.Visible;
+                    PanelDwell.Visibility = Visibility.Visible;
+                    LblKey.Text = "按键:";
+                    LblDwell.Text = "按压(ms):";
+                    break;
+            }
+        }
+
+        private void BtnIdentifyKey_Click(object sender, RoutedEventArgs e)
+        {
+            _identifyingKey = true;
+            BtnIdentifyKey.Content = "请按键...";
+            this.Focus();
+        }
+
+        private void EditStepWindow_PreviewKeyDown(object sender, System.Windows.Input.KeyEventArgs e)
+        {
+            if (_identifyingKey)
+            {
+                var key = (e.Key == System.Windows.Input.Key.System ? e.SystemKey : e.Key);
+                TxtKey.Text = key.ToString();
+                
+                _identifyingKey = false;
+                BtnIdentifyKey.Content = "识别按键";
+                e.Handled = true;
             }
         }
 
@@ -183,6 +226,9 @@ namespace WindowSpy
             _step.JumpOnTrue = ChkJump.IsChecked == true;
             _step.OcrNumbersOnly = ChkOcrNums.IsChecked == true;
             _step.ReuseOcrOnRoiUnchanged = ChkReuseOcrRoi.IsChecked == true;
+            _step.NetworkAdapterName = CmbNetworkAdapter.Text;
+            _step.NetworkEnable = CmbNetworkAction.SelectedIndex == 1;
+            _step.NetworkSync = ChkNetworkSync.IsChecked == true;
 
             DialogResult = true;
             Close();

@@ -34,16 +34,24 @@ public class OnnxOcrHelper : IDisposable
         get => _useGpu;
         set
         {
-            if (_useGpu != value)
+            if (_useGpu == value) return;
+
+            _semaphore.Wait();
+            try
             {
+                if (_useGpu == value) return;
                 _useGpu = value;
-                // 如果进程已启动，需要重启以应用更改
+
                 if (_process != null)
                 {
                     try { _process.Kill(); } catch { }
                     _process.Dispose();
                     _process = null;
                 }
+            }
+            finally
+            {
+                _semaphore.Release();
             }
         }
     }
@@ -164,7 +172,11 @@ public class OnnxOcrHelper : IDisposable
                 // 3. 移除其他不可见控制字符 (保留换行、制表符、可打印字符和扩展字符)
                 cleanLog = new string(cleanLog.Where(c => (c >= 32 && c != 127) || c == '\n' || c == '\r' || c == '\t' || c > 127).ToArray());
                 
-                lock(stderrBuilder) stderrBuilder.AppendLine(cleanLog); 
+                lock(stderrBuilder) 
+                {
+                    if (stderrBuilder.Length > 50000) stderrBuilder.Clear();
+                    stderrBuilder.AppendLine(cleanLog); 
+                }
                 Log($"[Python Stderr] {cleanLog}");
             }
         };
@@ -244,31 +256,33 @@ public class OnnxOcrHelper : IDisposable
             
             if (_process == null) throw new Exception("Process is null");
 
+            var proc = _process;
+
             // 增加日志：发送图像路径给Python
             Log($"[C# Info] Sending image to Python via Memory (Base64 len: {base64Str.Length})");
 
-            await _process.StandardInput.WriteLineAsync("base64:" + base64Str);
-            await _process.StandardInput.FlushAsync();
+            await proc.StandardInput.WriteLineAsync("base64:" + base64Str);
+            await proc.StandardInput.FlushAsync();
                 
-                var readTask = _process.StandardOutput.ReadLineAsync();
+                var readTask = proc.StandardOutput.ReadLineAsync();
                 var timeoutTask = Task.Delay(TimeSpan.FromSeconds(120)); 
                 
                 var completedTask = await Task.WhenAny(readTask, timeoutTask);
                 if (completedTask == timeoutTask)
                 {
                     Log("[C# Error] OCR timeout triggered.");
-                    try { _process.Kill(); } catch {} 
-                    _process.Dispose(); 
-                    _process = null;
+                    try { proc.Kill(); } catch {}
+                    proc.Dispose();
+                    if (ReferenceEquals(_process, proc)) _process = null;
                     throw new Exception("OCR inference timed out");
                 }
 
                 var line = await readTask;
                 if (string.IsNullOrEmpty(line))
                 {
-                     try { _process.Kill(); } catch {} 
-                    _process.Dispose(); 
-                    _process = null;
+                    try { proc.Kill(); } catch {}
+                    proc.Dispose();
+                    if (ReferenceEquals(_process, proc)) _process = null;
                     throw new Exception("Python process returned empty line (crash?)");
                 }
 
@@ -344,12 +358,27 @@ public class OnnxOcrHelper : IDisposable
     {
         if (_disposed) return;
         _disposed = true;
-        _semaphore.Dispose();
-        
-        if (_process != null)
+        try
         {
-            try { _process.Kill(); } catch { }
-            _process.Dispose();
+            _semaphore.Wait();
+            try
+            {
+                if (_process != null)
+                {
+                    try { _process.Kill(); } catch { }
+                    _process.Dispose();
+                    _process = null;
+                }
+            }
+            finally
+            {
+                _semaphore.Release();
+            }
+        }
+        catch { }
+        finally
+        {
+            _semaphore.Dispose();
         }
     }
 

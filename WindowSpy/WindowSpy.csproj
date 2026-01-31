@@ -8,23 +8,30 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <ApplicationManifest>app.manifest</ApplicationManifest>
+    <AssemblyName>moligod自动化工具</AssemblyName>
   </PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="OpenCvSharp4.Extensions" Version="4.10.0.20240616" />
     <PackageReference Include="OpenCvSharp4.Windows" Version="4.10.0.20240616" />
     <PackageReference Include="System.Drawing.Common" Version="8.0.8" />
-    <PackageReference Include="System.Management" Version="10.0.1" />
+    <PackageReference Include="System.Management" Version="8.0.0" />
   </ItemGroup>
   
   <ItemGroup>
       <!-- 包含 Scripts 目录，排除所有环境和模型，只保留源代码 -->
       <None Include="..\Scripts\**" Exclude="..\Scripts\build\**;..\Scripts\__pycache__\**;..\Scripts\*.spec;..\Scripts\dist\**;..\Scripts\*.dll" Link="Scripts\%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+      
+      <!-- 包含打包好的 Python 环境 (onnx_ocr_cli.exe 及其依赖) -->
+      <Content Include="..\Scripts\dist\onnx_ocr_cli\**\*.*" Link="Scripts\dist\onnx_ocr_cli\%(RecursiveDir)%(Filename)%(Extension)">
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+      </Content>
+      
       <EmbeddedResource Include="check_gpu_env.py" />
   </ItemGroup>
   
-  <ItemGroup>
-    <!-- 已移除所有手动 DLL 引用 -->
-  </ItemGroup>
-
+  <Target Name="CopyBundledOcrExe" AfterTargets="Publish">
+    <!-- 保留此 Target 以防万一，但 Content 应该已经覆盖了 -->
+  </Target>
 </Project>

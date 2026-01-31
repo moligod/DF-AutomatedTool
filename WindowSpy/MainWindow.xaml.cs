@@ -2,6 +2,7 @@ using System;
 using System.Drawing;
 using System.Linq;
 using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Interop;
 using System.Windows.Media;
@@ -14,6 +15,7 @@ using System.Threading;
 using OpenCvSharp;
 using OpenCvSharp.Extensions;
 using WindowSpy.Ocr;
+using System.Management;
 
 namespace WindowSpy
 {
@@ -41,7 +43,7 @@ namespace WindowSpy
         private System.Windows.Input.ModifierKeys _pressedModsDuringBinding = System.Windows.Input.ModifierKeys.None;
         private bool _nonModifierPressedDuringBinding = false;
         private readonly System.Collections.Generic.List<ScriptStep> _steps = new();
-        private int _dragIndex = -1;
+        private System.Windows.Point? _lastMouseDown = null;
         private readonly System.Collections.Generic.Dictionary<string, string> _vars = new();
         private NativeMethods.LowLevelMouseProc _hookProc;
         private IntPtr _hookID = IntPtr.Zero;
@@ -58,21 +60,44 @@ namespace WindowSpy
 
         private readonly System.Collections.Generic.Dictionary<ScriptStep, OcrRoiCacheEntry> _ocrRoiCache = new();
         private int _firstInferenceHintLogged = 0;
+        private readonly string _savedQueuesDir = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "SavedQueues");
 
         public MainWindow()
         {
             InitializeComponent();
+            this.Loaded += MainWindow_Loaded;
             _ocr.Logger = AppendLog;
-            _ocr.UseGpu = true; // 默认尝试使用 GPU
+            _ocr.UseGpu = UseGpuCheck?.IsChecked == true;
             _hookProc = HookCallback;
             
-            // 绑定 CheckBox 事件
             if (UseGpuCheck != null)
             {
                 UseGpuCheck.Checked += (s, e) => { if (_ocr != null) { _ocr.UseGpu = true; AppendLog("设置：已启用 GPU 加速请求"); } };
                 UseGpuCheck.Unchecked += (s, e) => { if (_ocr != null) { _ocr.UseGpu = false; AppendLog("设置：已强制切换为 CPU 模式"); } };
             }
         }
+
+        public List<string> GetNetworkAdapters()
+        {
+            var list = new List<string>();
+            try
+            {
+                var query = new SelectQuery("Win32_NetworkAdapter", "PhysicalAdapter=True AND NetConnectionID IS NOT NULL");
+                using var searcher = new ManagementObjectSearcher(query);
+                foreach (ManagementObject mo in searcher.Get())
+                {
+                    string name = mo["NetConnectionID"]?.ToString() ?? mo["Name"]?.ToString() ?? "Unknown";
+                    list.Add(name);
+                }
+            }
+            catch (Exception ex)
+            {
+                AppendLog($"[网络] 加载网卡列表失败: {ex.Message}");
+            }
+            return list;
+        }
+
+
         private volatile bool _isRunning = false;
 
         private readonly struct OcrRoiCacheEntry
@@ -113,7 +138,7 @@ namespace WindowSpy
             return (BitConverter.ToUInt64(digest, 0), BitConverter.ToUInt64(digest, 8));
         }
 
-        private string PerformOcrWithCache(ScriptStep step, Mat matRoi)
+        private (string text, bool reused) PerformOcrWithCache(ScriptStep step, Mat matRoi)
         {
             if (step.ReuseOcrOnRoiUnchanged)
             {
@@ -122,16 +147,16 @@ namespace WindowSpy
                     cached.H1 == sig.h1 && cached.H2 == sig.h2 &&
                     cached.NumbersOnly == step.OcrNumbersOnly)
                 {
-                    return cached.Text ?? "";
+                    return (cached.Text ?? "", true);
                 }
 
                 string text = PerformOcrInternal(step, matRoi);
                 _ocrRoiCache[step] = new OcrRoiCacheEntry(sig.h1, sig.h2, step.OcrNumbersOnly, text);
-                return text;
+                return (text, false);
             }
             else
             {
-                return PerformOcrInternal(step, matRoi);
+                return (PerformOcrInternal(step, matRoi), false);
             }
         }
 
@@ -322,7 +347,7 @@ namespace WindowSpy
             BoundBTitle.Text = _boundBHwnd == IntPtr.Zero ? "" : NativeMethods.GetWindowTitle(_boundBHwnd);
         }
 
-        private async void ShotButtonA_Click(object sender, RoutedEventArgs e)
+        private void ShotButtonA_Click(object sender, RoutedEventArgs e)
         {
             if (_boundAHwnd == IntPtr.Zero)
             {
@@ -330,7 +355,7 @@ namespace WindowSpy
                 return;
             }
             bool onlyNums = OcrAOnlyNums?.IsChecked == true;
-            await Task.Run(() =>
+            Task.Run(() =>
             {
                 try
                 {
@@ -364,7 +389,7 @@ namespace WindowSpy
                         using var pen = new System.Drawing.Pen(System.Drawing.Color.Red, 3);
                         g.DrawRectangle(pen, r);
                     }
-                    if (!string.IsNullOrWhiteSpace(ocrText)) Dispatcher.Invoke(() => OcrResultTextA.Text = ocrText);
+                    Dispatcher.Invoke(() => SetOcrResult(OcrResultTextA, ocrText));
                     var path = NativeMethods.SaveBitmap(bmp);
                     Dispatcher.Invoke(() => AppendLog($"已保存：{path}"));
                 }
@@ -403,6 +428,7 @@ namespace WindowSpy
                 interBottom - wrect.Top
             );
             OcrResultTextA.Text = "";
+            OcrResultTextA.Foreground = System.Windows.Media.Brushes.Black;
             AppendLog($"A已选择区域：{_rectA.Value.Width}x{_rectA.Value.Height}");
         }
 
@@ -456,7 +482,7 @@ namespace WindowSpy
             }
         }
 
-        private async void ShotButtonB_Click(object sender, RoutedEventArgs e)
+        private void ShotButtonB_Click(object sender, RoutedEventArgs e)
         {
             if (_boundBHwnd == IntPtr.Zero)
             {
@@ -464,7 +490,7 @@ namespace WindowSpy
                 return;
             }
             bool onlyNums = OcrBOnlyNums?.IsChecked == true;
-            await Task.Run(() =>
+            Task.Run(() =>
             {
                 try
                 {
@@ -498,7 +524,7 @@ namespace WindowSpy
                         using var pen = new System.Drawing.Pen(System.Drawing.Color.Red, 3);
                         g.DrawRectangle(pen, r);
                     }
-                    if (!string.IsNullOrWhiteSpace(ocrText)) Dispatcher.Invoke(() => OcrResultTextB.Text = ocrText);
+                    Dispatcher.Invoke(() => SetOcrResult(OcrResultTextB, ocrText));
                     var path = NativeMethods.SaveBitmap(bmp);
                     Dispatcher.Invoke(() => AppendLog($"已保存：{path}"));
                 }
@@ -537,6 +563,7 @@ namespace WindowSpy
                 interBottom - wrect.Top
             );
             OcrResultTextB.Text = "";
+            OcrResultTextB.Foreground = System.Windows.Media.Brushes.Black;
             AppendLog($"B已选择区域：{_rectB.Value.Width}x{_rectB.Value.Height}");
         }
 
@@ -714,10 +741,11 @@ namespace WindowSpy
                         var h = Math.Max(1, Math.Min(mat.Rows - y, r.Height));
                         var roi = new OpenCvSharp.Rect(x, y, w, h);
                         using var matRoi = new Mat(mat, roi);
-                        string ocrText = PerformOcrWithCache(step, matRoi);
-                        if (!string.IsNullOrWhiteSpace(ocrText)) Dispatcher.Invoke(() => { if (OcrResultTextA != null) OcrResultTextA.Text = ocrText; });
-                        lastOcrA = ocrText;
-                        Dispatcher.Invoke(() => AppendLog($"A执行：识别{(step.ReuseOcrOnRoiUnchanged ? "(复用/计算)" : "")} {ocrText}"));
+                        var ocr = PerformOcrWithCache(step, matRoi);
+                        lastOcrA = ocr.text;
+                        Dispatcher.Invoke(() => SetOcrResult(OcrResultTextA, ocr.text));
+                        var tag = step.ReuseOcrOnRoiUnchanged ? (ocr.reused ? "(复用)" : "(重新识别)") : "";
+                        Dispatcher.Invoke(() => AppendLog($"A执行：识别{tag} {ocr.text}"));
                     }
                     else if (step.Type == ActionType.Condition)
                     {
@@ -730,8 +758,9 @@ namespace WindowSpy
                     }
                     else if (step.Type == ActionType.Expression)
                     {
-                        bool ok = EvaluateExpression(step.Pattern);
+                        bool ok = EvaluateExpression(step.Pattern, out string? errorMsg);
                         step.LastResult = ok;
+                        if (errorMsg != null) Dispatcher.Invoke(() => AppendLog($"A表达式错误: {errorMsg}"));
                         Dispatcher.Invoke(() => AppendLog($"A表达式检查: {(ok ? "为真" : "为假")} 表达式 {step.Pattern}，跳出条件={ (step.JumpOnTrue ? "为真" : "为假") }"));
                         Dispatcher.Invoke(() => AppendExprLog($"A表达式检查: {(ok ? "为真" : "为假")} 表达式 {step.Pattern}"));
                         Dispatcher.Invoke(() => RefreshSteps());
@@ -752,6 +781,10 @@ namespace WindowSpy
                         {
                             Dispatcher.Invoke(() => AppendLog($"A未知按键：{keyStr}"));
                         }
+                    }
+                    else if (step.Type == ActionType.Network)
+                    {
+                        if (step.DwellMs > 0) System.Threading.Thread.Sleep(step.DwellMs);
                     }
                 }
             }
@@ -866,10 +899,11 @@ namespace WindowSpy
                         var h = Math.Max(1, Math.Min(mat.Rows - y, r.Height));
                         var roi = new OpenCvSharp.Rect(x, y, w, h);
                         using var matRoi = new Mat(mat, roi);
-                        string ocrText = PerformOcrWithCache(step, matRoi);
-                        if (!string.IsNullOrWhiteSpace(ocrText)) Dispatcher.Invoke(() => { if (OcrResultTextB != null) OcrResultTextB.Text = ocrText; });
-                        lastOcrB = ocrText;
-                        Dispatcher.Invoke(() => AppendLog($"B执行：识别{(step.ReuseOcrOnRoiUnchanged ? "(复用/计算)" : "")} {ocrText}"));
+                        var ocr = PerformOcrWithCache(step, matRoi);
+                        lastOcrB = ocr.text;
+                        Dispatcher.Invoke(() => SetOcrResult(OcrResultTextB, ocr.text));
+                        var tag = step.ReuseOcrOnRoiUnchanged ? (ocr.reused ? "(复用)" : "(重新识别)") : "";
+                        Dispatcher.Invoke(() => AppendLog($"B执行：识别{tag} {ocr.text}"));
                     }
                     else if (step.Type == ActionType.Condition)
                     {
@@ -882,8 +916,9 @@ namespace WindowSpy
                     }
                     else if (step.Type == ActionType.Expression)
                     {
-                        bool ok = EvaluateExpression(step.Pattern);
+                        bool ok = EvaluateExpression(step.Pattern, out string? errorMsg);
                         step.LastResult = ok;
+                        if (errorMsg != null) Dispatcher.Invoke(() => AppendLog($"B表达式错误: {errorMsg}"));
                         Dispatcher.Invoke(() => AppendLog($"B表达式检查: {(ok ? "为真" : "为假")} 表达式 {step.Pattern}，跳出条件={ (step.JumpOnTrue ? "为真" : "为假") }"));
                         Dispatcher.Invoke(() => AppendExprLog($"B表达式检查: {(ok ? "为真" : "为假")} 表达式 {step.Pattern}"));
                         Dispatcher.Invoke(() => RefreshSteps());
@@ -904,6 +939,10 @@ namespace WindowSpy
                         {
                             Dispatcher.Invoke(() => AppendLog($"B未知按键：{keyStr}"));
                         }
+                    }
+                    else if (step.Type == ActionType.Network)
+                    {
+                        if (step.DwellMs > 0) System.Threading.Thread.Sleep(step.DwellMs);
                     }
                 }
             }
@@ -945,6 +984,8 @@ namespace WindowSpy
                 return $"{s.Target} 置顶窗口";
             if (s.Type == ActionType.KeyPress)
                 return $"按键 \"{s.Key}\" (按压 {s.DwellMs}ms)";
+            if (s.Type == ActionType.Comment)
+                return $"注释: {s.Pattern}";
             if (s.Type == ActionType.IfStart) return $"If {s.Pattern}";
             if (s.Type == ActionType.ElseIf) return $"ElseIf {s.Pattern}";
             if (s.Type == ActionType.Else) return "Else";
@@ -954,6 +995,8 @@ namespace WindowSpy
             if (s.Type == ActionType.Goto) return $"跳转到 {s.Pattern}";
             if (s.Type == ActionType.Label) return $"标签 {s.Pattern}:";
             if (s.Type == ActionType.BreakBlock) return "跳出代码块(If/Else)";
+            if (s.Type == ActionType.Network)
+                return $"网络: {s.NetworkAdapterName} -> {(s.NetworkEnable ? "恢复" : "断开")}{(s.NetworkSync ? " (同步)" : "")}{(s.DelayMs > 0 ? $" 延{s.DelayMs}ms" : "")}{(s.DwellMs > 0 ? $" 停{s.DwellMs}ms" : "")}";
             return $"{s.Target} 延 {s.DelayMs}±{s.RandomDelay}ms → 识别{(s.OcrNumbersOnly ? "(仅数字)" : "")}{(s.ReuseOcrOnRoiUnchanged ? "(ROI复用)" : "")} 区域 ({s.Rect.X},{s.Rect.Y},{s.Rect.Width},{s.Rect.Height})";
         }
 
@@ -975,7 +1018,15 @@ namespace WindowSpy
                 }
 
                 string prefix = new string(' ', currentIndent * 4);
-                StepsList.Items.Add(prefix + FormatStep(s));
+                var item = new System.Windows.Controls.ListBoxItem
+                {
+                    Content = prefix + FormatStep(s)
+                };
+                if (s.Type == ActionType.Comment)
+                {
+                    item.Foreground = System.Windows.Media.Brushes.Gray;
+                }
+                StepsList.Items.Add(item);
 
                 if (s.Type == ActionType.IfStart || s.Type == ActionType.LoopStart)
                 {
@@ -984,32 +1035,116 @@ namespace WindowSpy
             }
         }
 
+        private void SetOcrResult(System.Windows.Controls.TextBlock? block, string text)
+        {
+            if (block == null) return;
+            if (string.IsNullOrWhiteSpace(text))
+            {
+                block.Text = "未识别到数据";
+                block.Foreground = System.Windows.Media.Brushes.Red;
+            }
+            else
+            {
+                block.Text = text;
+                block.Foreground = System.Windows.Media.Brushes.Black;
+            }
+        }
+
         private void StepsList_PreviewMouseLeftButtonDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
         {
-            _dragIndex = GetIndexAtPoint(StepsList, e.GetPosition(StepsList));
-            if (_dragIndex >= 0) StepsList.SelectedIndex = _dragIndex;
+            var pos = e.GetPosition(StepsList);
+            var idx = GetIndexAtPoint(StepsList, pos);
+            if (idx >= 0)
+            {
+                var item = StepsList.Items[idx];
+                if (StepsList.SelectedItems.Contains(item))
+                {
+                    if ((Keyboard.Modifiers & ModifierKeys.Control) == 0 && (Keyboard.Modifiers & ModifierKeys.Shift) == 0)
+                    {
+                        _lastMouseDown = pos;
+                        e.Handled = true;
+                        StepsList.Focus();
+                    }
+                }
+            }
         }
+
+        private void StepsList_PreviewMouseLeftButtonUp(object sender, System.Windows.Input.MouseButtonEventArgs e)
+        {
+            if (_lastMouseDown != null)
+            {
+                var pos = e.GetPosition(StepsList);
+                var idx = GetIndexAtPoint(StepsList, pos);
+                if (idx >= 0)
+                {
+                    StepsList.SelectedItems.Clear();
+                    StepsList.SelectedItems.Add(StepsList.Items[idx]);
+                }
+                _lastMouseDown = null;
+            }
+        }
+
         private void StepsList_MouseMove(object sender, System.Windows.Input.MouseEventArgs e)
         {
-            if (e.LeftButton == System.Windows.Input.MouseButtonState.Pressed && _dragIndex >= 0)
+            if (e.LeftButton == System.Windows.Input.MouseButtonState.Pressed)
             {
-                System.Windows.DragDrop.DoDragDrop(StepsList, StepsList.SelectedItem, System.Windows.DragDropEffects.Move);
+                if (_lastMouseDown != null)
+                {
+                    var current = e.GetPosition(StepsList);
+                    if (Math.Abs(current.X - _lastMouseDown.Value.X) > SystemParameters.MinimumHorizontalDragDistance ||
+                        Math.Abs(current.Y - _lastMouseDown.Value.Y) > SystemParameters.MinimumVerticalDragDistance)
+                    {
+                        StartDrag(current);
+                        _lastMouseDown = null;
+                    }
+                }
+                else if (StepsList.SelectedItems.Count > 0)
+                {
+                    StartDrag(e.GetPosition(StepsList));
+                }
+            }
+        }
+
+        private void StartDrag(System.Windows.Point pos)
+        {
+            var idx = GetIndexAtPoint(StepsList, pos);
+            if (idx >= 0 && StepsList.SelectedItems.Contains(StepsList.Items[idx]))
+            {
+                var indices = StepsList.SelectedItems.Cast<System.Windows.Controls.ListBoxItem>()
+                               .Select(item => StepsList.Items.IndexOf(item))
+                               .OrderBy(i => i).ToList();
+                System.Windows.DragDrop.DoDragDrop(StepsList, indices, System.Windows.DragDropEffects.Move);
             }
         }
         private void StepsList_Drop(object sender, System.Windows.DragEventArgs e)
         {
-            var targetIndex = GetIndexAtPoint(StepsList, e.GetPosition(StepsList));
-            if (targetIndex < 0) targetIndex = _steps.Count - 1;
-            if (_dragIndex >= 0 && targetIndex >= 0 && targetIndex != _dragIndex)
+            if (e.Data.GetDataPresent(typeof(System.Collections.Generic.List<int>)))
             {
-                var item = _steps[_dragIndex];
-                _steps.RemoveAt(_dragIndex);
-                if (targetIndex >= _steps.Count) _steps.Add(item);
-                else _steps.Insert(targetIndex, item);
+                var indices = (System.Collections.Generic.List<int>)e.Data.GetData(typeof(System.Collections.Generic.List<int>));
+                var targetIndex = GetIndexAtPoint(StepsList, e.GetPosition(StepsList));
+                if (targetIndex < 0) targetIndex = _steps.Count; // Drop at end if invalid
+
+                var itemsToMove = new System.Collections.Generic.List<ScriptStep>();
+                foreach (var i in indices) itemsToMove.Add(_steps[i]);
+
+                for (int i = indices.Count - 1; i >= 0; i--)
+                {
+                    _steps.RemoveAt(indices[i]);
+                }
+
+                int adjustment = indices.Count(i => i < targetIndex);
+                int newTarget = Math.Max(0, targetIndex - adjustment);
+                if (newTarget > _steps.Count) newTarget = _steps.Count;
+
+                _steps.InsertRange(newTarget, itemsToMove);
                 RefreshSteps();
-                StepsList.SelectedIndex = targetIndex;
+
+                StepsList.SelectedItems.Clear();
+                for (int i = 0; i < itemsToMove.Count; i++)
+                {
+                    StepsList.SelectedItems.Add(StepsList.Items[newTarget + i]);
+                }
             }
-            _dragIndex = -1;
         }
         private void StepsList_DragOver(object sender, System.Windows.DragEventArgs e)
         {
@@ -1032,19 +1167,58 @@ namespace WindowSpy
 
         private void MenuItem_Delete_Click(object sender, RoutedEventArgs e)
         {
-            if (StepsList.SelectedIndex < 0) return;
-            var step = _steps[StepsList.SelectedIndex];
-            _ocrRoiCache.Remove(step);
-            _steps.RemoveAt(StepsList.SelectedIndex);
+            if (StepsList.SelectedItems.Count == 0) return;
+            var indices = new System.Collections.Generic.List<int>();
+            foreach (var item in StepsList.SelectedItems)
+            {
+                indices.Add(StepsList.Items.IndexOf(item));
+            }
+            indices.Sort();
+
+            for (int i = indices.Count - 1; i >= 0; i--)
+            {
+                int idx = indices[i];
+                if (idx >= 0 && idx < _steps.Count)
+                {
+                    _ocrRoiCache.Remove(_steps[idx]);
+                    _steps.RemoveAt(idx);
+                }
+            }
             RefreshSteps();
-            AppendLog("已删除所选步骤");
+            AppendLog($"已删除 {indices.Count} 个步骤");
+        }
+
+        private void MenuItem_ExecuteSelected_Click(object sender, RoutedEventArgs e)
+        {
+            var indices = new System.Collections.Generic.List<int>();
+            foreach (var item in StepsList.SelectedItems)
+            {
+                indices.Add(StepsList.Items.IndexOf(item));
+            }
+            indices.Sort();
+
+            var selected = new System.Collections.Generic.List<ScriptStep>();
+            foreach (var idx in indices)
+            {
+                if (idx >= 0 && idx < _steps.Count) selected.Add(_steps[idx]);
+            }
+
+            if (selected.Count > 0)
+            {
+                AppendLog($"开始执行选中的 {selected.Count} 个步骤...");
+                RunSteps(selected);
+            }
+            else
+            {
+                AppendLog("未选择要执行的步骤");
+            }
         }
 
         private void MenuItem_Edit_Click(object sender, RoutedEventArgs e)
         {
             if (StepsList.SelectedIndex < 0) return;
             var step = _steps[StepsList.SelectedIndex];
-            var editor = new EditStepWindow(step);
+            var editor = new EditStepWindow(step, GetNetworkAdapters());
             editor.Owner = this;
             if (editor.ShowDialog() == true)
             {
@@ -1136,17 +1310,314 @@ namespace WindowSpy
         {
             var key = KeyPressBox?.Text ?? "";
             if (string.IsNullOrWhiteSpace(key)) { AppendLog("按键名称不能为空"); return; }
-            _steps.Add(new ScriptStep { Type = ActionType.KeyPress, Key = key });
+            _steps.Add(new ScriptStep { Type = ActionType.KeyPress, Key = key, DwellMs = 50 });
             RefreshSteps();
             AppendLog($"已添加按键步骤：{key}");
         }
 
-        private async void RunScriptAll_Click(object sender, RoutedEventArgs e)
+        private void AddCommentStep_Click(object sender, RoutedEventArgs e)
+        {
+            var text = CommentText?.Text ?? "";
+            if (string.IsNullOrWhiteSpace(text)) { AppendLog("注释内容不能为空"); return; }
+            _steps.Add(new ScriptStep { Type = ActionType.Comment, Pattern = text, DelayMs = 0, DwellMs = 0 });
+            RefreshSteps();
+            AppendLog($"已添加注释步骤：{text}");
+        }
+
+        private void MenuItem_Duplicate_Click(object sender, RoutedEventArgs e)
+        {
+            var selectedIndices = new System.Collections.Generic.List<int>();
+            foreach (var item in StepsList.SelectedItems)
+            {
+                selectedIndices.Add(StepsList.Items.IndexOf(item));
+            }
+            selectedIndices.Sort();
+
+            if (selectedIndices.Count == 0) return;
+
+            // 获取要复制的步骤对象
+            var selectedSteps = new System.Collections.Generic.List<ScriptStep>();
+            foreach (var idx in selectedIndices)
+            {
+                if (idx >= 0 && idx < _steps.Count)
+                {
+                    selectedSteps.Add(_steps[idx]);
+                }
+            }
+
+            // 找到插入位置：最后一个选中项的后面
+            int lastIndex = selectedIndices[selectedIndices.Count - 1];
+
+            foreach (var item in selectedSteps)
+            {
+                // 深拷贝
+                var newItem = new ScriptStep
+                {
+                    Type = item.Type,
+                    Target = item.Target,
+                    Rect = item.Rect,
+                    Point = item.Point,
+                    DelayMs = item.DelayMs,
+                    RandomDelay = item.RandomDelay,
+                    DwellMs = item.DwellMs,
+                    RandomDwell = item.RandomDwell,
+                    RandomX = item.RandomX,
+                    RandomY = item.RandomY,
+                    Pattern = item.Pattern,
+                    Key = item.Key,
+                    Count = item.Count,
+                    JumpOnTrue = item.JumpOnTrue,
+                    OcrNumbersOnly = item.OcrNumbersOnly,
+                    ReuseOcrOnRoiUnchanged = item.ReuseOcrOnRoiUnchanged,
+                    NetworkAdapterName = item.NetworkAdapterName,
+                    NetworkEnable = item.NetworkEnable,
+                    NetworkSync = item.NetworkSync
+                };
+                
+                _steps.Insert(lastIndex + 1, newItem);
+                lastIndex++;
+            }
+
+            RefreshSteps();
+            AppendLog($"已复制 {selectedSteps.Count} 个步骤");
+        }
+
+        private void NumberOnly_PreviewTextInput(object sender, System.Windows.Input.TextCompositionEventArgs e)
+        {
+            e.Handled = new System.Text.RegularExpressions.Regex("[^0-9]+").IsMatch(e.Text);
+        }
+
+        // ============================
+        // 定时任务相关
+        // ============================
+        private System.Windows.Threading.DispatcherTimer? _scheduleTimer;
+        private DateTime? _scheduleStartTargetTime;
+        private DateTime? _scheduleStopTargetTime;
+        private bool _isStartScheduleEnabled = false;
+        private bool _isStopScheduleEnabled = false;
+
+        private void ToggleStartScheduleButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (_isStartScheduleEnabled)
+            {
+                // 停止启动定时
+                _isStartScheduleEnabled = false;
+                _scheduleStartTargetTime = null;
+                ToggleStartScheduleButton.Content = "启用启动";
+                AppendLog("已关闭定时启动");
+            }
+            else
+            {
+                // 启用启动定时
+                string h = ScheduleStartH.Text.Trim().PadLeft(2, '0');
+                string m = ScheduleStartM.Text.Trim().PadLeft(2, '0');
+                string s = ScheduleStartS.Text.Trim().PadLeft(2, '0');
+                string timeStr = $"{h}:{m}:{s}";
+
+                if (!DateTime.TryParse(timeStr, out DateTime dt))
+                {
+                    AppendLog("启动时间格式错误，请使用 HH:mm:ss 格式");
+                    MessageBox.Show("启动时间格式错误，请使用 HH:mm:ss 格式");
+                    return;
+                }
+
+                DateTime now = DateTime.Now;
+                var target = new DateTime(now.Year, now.Month, now.Day, dt.Hour, dt.Minute, dt.Second);
+                if (target <= now)
+                {
+                    target = target.AddDays(1);
+                }
+                _scheduleStartTargetTime = target;
+                _isStartScheduleEnabled = true;
+                ToggleStartScheduleButton.Content = "取消启动";
+                AppendLog($"已启用定时启动，目标时间：{target:yyyy-MM-dd HH:mm:ss}");
+            }
+            EnsureScheduleTimer();
+            UpdateScheduleStatus();
+        }
+
+        private void ToggleStopScheduleButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (_isStopScheduleEnabled)
+            {
+                // 停止停止定时
+                _isStopScheduleEnabled = false;
+                _scheduleStopTargetTime = null;
+                ToggleStopScheduleButton.Content = "启用停止";
+                AppendLog("已关闭定时停止");
+            }
+            else
+            {
+                // 启用停止定时
+                string h = ScheduleStopH.Text.Trim().PadLeft(2, '0');
+                string m = ScheduleStopM.Text.Trim().PadLeft(2, '0');
+                string s = ScheduleStopS.Text.Trim().PadLeft(2, '0');
+                
+                // Only enable stop time if at least one field is filled, or default to 00:00:00?
+                // Actually the user probably wants to set a specific time.
+                // If fields are empty, we can default to 00, but let's check if they are valid.
+                
+                string timeStr = $"{h.PadLeft(2, '0')}:{m.PadLeft(2, '0')}:{s.PadLeft(2, '0')}";
+
+                if (!DateTime.TryParse(timeStr, out DateTime dt))
+                {
+                    AppendLog("停止时间格式错误，请使用 HH:mm:ss 格式");
+                    MessageBox.Show("停止时间格式错误，请使用 HH:mm:ss 格式");
+                    return;
+                }
+
+                DateTime now = DateTime.Now;
+                var target = new DateTime(now.Year, now.Month, now.Day, dt.Hour, dt.Minute, dt.Second);
+                if (target <= now)
+                {
+                    target = target.AddDays(1);
+                }
+                _scheduleStopTargetTime = target;
+                _isStopScheduleEnabled = true;
+                ToggleStopScheduleButton.Content = "取消停止";
+                AppendLog($"已启用定时停止，目标时间：{target:yyyy-MM-dd HH:mm:ss}");
+            }
+            EnsureScheduleTimer();
+            UpdateScheduleStatus();
+        }
+
+        private void EnsureScheduleTimer()
+        {
+            if (_isStartScheduleEnabled || _isStopScheduleEnabled)
+            {
+                if (_scheduleTimer == null)
+                {
+                    _scheduleTimer = new System.Windows.Threading.DispatcherTimer();
+                    _scheduleTimer.Interval = TimeSpan.FromSeconds(1);
+                    _scheduleTimer.Tick += ScheduleTimer_Tick;
+                }
+                if (!_scheduleTimer.IsEnabled)
+                {
+                    _scheduleTimer.Start();
+                }
+            }
+            else
+            {
+                if (_scheduleTimer != null && _scheduleTimer.IsEnabled)
+                {
+                    _scheduleTimer.Stop();
+                }
+            }
+        }
+
+        private void ScheduleTimer_Tick(object? sender, EventArgs e)
+        {
+            var now = DateTime.Now;
+
+            if (_isStartScheduleEnabled && _scheduleStartTargetTime.HasValue)
+            {
+                if (now >= _scheduleStartTargetTime.Value)
+                {
+                    AppendLog("定时启动时间到达，开始执行...");
+                    RunScriptAll();
+                    // 推迟到下一天
+                    _scheduleStartTargetTime = _scheduleStartTargetTime.Value.AddDays(1);
+                }
+            }
+
+            if (_isStopScheduleEnabled && _scheduleStopTargetTime.HasValue)
+            {
+                if (now >= _scheduleStopTargetTime.Value)
+                {
+                    AppendLog("定时停止时间到达，正在停止脚本...");
+                    StopScript();
+                    // 推迟到下一天
+                    _scheduleStopTargetTime = _scheduleStopTargetTime.Value.AddDays(1);
+                }
+            }
+
+            UpdateScheduleStatus();
+        }
+
+        private void UpdateScheduleStatus()
+        {
+            string status = "";
+            if (_isStartScheduleEnabled && _scheduleStartTargetTime.HasValue)
+            {
+                status += $"启: {_scheduleStartTargetTime.Value:MM-dd HH:mm:ss} ";
+            }
+            else
+            {
+                status += "启: 未启用 ";
+            }
+
+            if (_isStopScheduleEnabled && _scheduleStopTargetTime.HasValue)
+            {
+                status += $"| 停: {_scheduleStopTargetTime.Value:MM-dd HH:mm:ss}";
+            }
+            else
+            {
+                status += "| 停: 未启用";
+            }
+            
+            ScheduleStatusText.Text = status;
+        }
+
+        private void TimeInput_TextChanged(object sender, TextChangedEventArgs e)
+        {
+            if (sender is TextBox tb)
+            {
+                // Remove non-digits
+                string text = new string(tb.Text.Where(char.IsDigit).ToArray());
+                
+                if (int.TryParse(text, out int val))
+                {
+                    // Check if it is Hour or Minute/Second based on Name
+                    if (tb.Name.EndsWith("H")) // Hour
+                    {
+                        if (val > 23) text = "23";
+                    }
+                    else // Minute or Second
+                    {
+                        if (val > 59) text = "59";
+                    }
+                }
+                
+                if (text != tb.Text)
+                {
+                    tb.Text = text;
+                    tb.SelectionStart = text.Length; // Restore cursor position
+                }
+            }
+        }
+
+        private void Hyperlink_RequestNavigate(object sender, System.Windows.Navigation.RequestNavigateEventArgs e)
+        {
+            try
+            {
+                Process.Start(new ProcessStartInfo(e.Uri.AbsoluteUri) { UseShellExecute = true });
+                e.Handled = true;
+            }
+            catch (Exception ex)
+            {
+                AppendLog($"无法打开链接: {ex.Message}");
+            }
+        }
+ 
+        private void RunScriptAll()
+        {
+            if (_steps.Count == 0)
+            {
+                AppendLog("没有要执行的步骤");
+                return;
+            }
+            RunSteps(_steps.ToList());
+        }
+
+        private void RunScriptAll_Click(object sender, RoutedEventArgs e)
+        {
+            RunScriptAll();
+        }
+
+        private async void RunSteps(System.Collections.Generic.List<ScriptStep> steps)
         {
             int loops = ParseInt(LoopCount?.Text, 1);
             bool breakOnEmpty = BreakOnEmpty?.IsChecked == true;
-            string lastOcrA = "", lastOcrB = "";
-            var stepsSnapshot = _steps.ToList();
             _stopAll = false;
             _isRunning = true;
             DoRegisterHotkey(); // 开始运行时注册热键
@@ -1154,9 +1625,9 @@ namespace WindowSpy
             
             await System.Threading.Tasks.Task.Run(() =>
             {
+                string lastOcrA = "", lastOcrB = "";
                 try
                 {
-                    var steps = stepsSnapshot;
                     int n = steps.Count;
 
                     var loopEndByStart = new System.Collections.Generic.Dictionary<int, int>();
@@ -1287,12 +1758,18 @@ namespace WindowSpy
                             var h = Math.Max(1, Math.Min(mat.Rows - y, r.Height));
                             var roi = new OpenCvSharp.Rect(x, y, w, h);
                             using var matRoi = new Mat(mat, roi);
-                            string ocrText = PerformOcrWithCache(step, matRoi);
+                            var ocr = PerformOcrWithCache(step, matRoi);
 
-                            if (step.Target == TargetType.A) { lastOcrA = ocrText; Dispatcher.Invoke(() => { if (OcrResultTextA != null) OcrResultTextA.Text = ocrText; }); }
-                            else { lastOcrB = ocrText; Dispatcher.Invoke(() => { if (OcrResultTextB != null) OcrResultTextB.Text = ocrText; }); }
-                            AppendLog($"{step.Target}执行：识别{(step.ReuseOcrOnRoiUnchanged ? "(复用/计算)" : "")} {ocrText}");
-                            if (breakOnEmpty && string.IsNullOrWhiteSpace(ocrText)) { breakAll = true; break; }
+                            if (step.Target == TargetType.A) { lastOcrA = ocr.text; Dispatcher.Invoke(() => SetOcrResult(OcrResultTextA, ocr.text)); }
+                            else { lastOcrB = ocr.text; Dispatcher.Invoke(() => SetOcrResult(OcrResultTextB, ocr.text)); }
+                            var tag = step.ReuseOcrOnRoiUnchanged ? (ocr.reused ? "(复用)" : "(重新识别)") : "";
+                            string logText = $"{step.Target}执行：识别{tag} {ocr.text}";
+                            if (string.IsNullOrWhiteSpace(ocr.text))
+                            {
+                                logText += " 未识别到数据 大概原因：识别区域过小或执行速度太快没有识别到对应图片";
+                            }
+                            AppendLog(logText);
+                            if (breakOnEmpty && string.IsNullOrWhiteSpace(ocr.text)) { breakAll = true; break; }
                         }
                         else if (step.Type == ActionType.Save)
                         {
@@ -1345,8 +1822,12 @@ namespace WindowSpy
                         }
                         else if (step.Type == ActionType.Expression)
                         {
-                            bool ok = EvaluateExpression(step.Pattern);
+                            bool ok = EvaluateExpression(step.Pattern, out string? errorMsg);
                             step.LastResult = ok;
+                            if (errorMsg != null)
+                            {
+                                AppendLog($"表达式错误: {errorMsg}");
+                            }
                             AppendLog($"表达式检查: {(ok ? "为真" : "为假")} 表达式 {step.Pattern}，跳出条件={ (step.JumpOnTrue ? "为真" : "为假") }");
                             AppendExprLog($"表达式检查: {(ok ? "为真" : "为假")} 表达式 {step.Pattern}");
                             if ((step.JumpOnTrue && ok) || (!step.JumpOnTrue && !ok))
@@ -1392,8 +1873,15 @@ namespace WindowSpy
                         }
                         else if (step.Type == ActionType.IfStart)
                         {
-                            bool res = EvaluateExpression(step.Pattern);
-                            AppendLog($"If 检查: {(res ? "为真" : "为假")} {step.Pattern}");
+                            bool res = EvaluateExpression(step.Pattern, out string? errorMsg);
+                            if (errorMsg != null)
+                            {
+                                AppendLog($"If 检查: 错误 - {errorMsg} {step.Pattern}");
+                            }
+                            else
+                            {
+                                AppendLog($"If 检查: {(res ? "为真" : "为假")} {step.Pattern}");
+                            }
                             if (!res)
                             {
                                 if (nextBranch.TryGetValue(idx, out var nb)) idx = nb;
@@ -1407,8 +1895,15 @@ namespace WindowSpy
                             if (forceEval)
                             {
                                 forceEval = false;
-                                bool res = EvaluateExpression(step.Pattern);
-                                AppendLog($"ElseIf 检查: {(res ? "为真" : "为假")} {step.Pattern}");
+                                bool res = EvaluateExpression(step.Pattern, out string? errorMsg);
+                                if (errorMsg != null)
+                                {
+                                    AppendLog($"ElseIf 检查: 错误 - {errorMsg} {step.Pattern}");
+                                }
+                                else
+                                {
+                                    AppendLog($"ElseIf 检查: {(res ? "为真" : "为假")} {step.Pattern}");
+                                }
                                 if (!res)
                                 {
                                     if (nextBranch.TryGetValue(idx, out var nb)) idx = nb;
@@ -1499,6 +1994,13 @@ namespace WindowSpy
                         {
                             // Do nothing
                         }
+                        else if (step.Type == ActionType.Network)
+                        {
+                            if (step.DwellMs > 0) System.Threading.Thread.Sleep(step.DwellMs);
+                        }
+                        else if (step.Type == ActionType.Comment)
+                        {
+                        }
                         idx++;
                     }
                     if (breakAll) break;
@@ -1515,8 +2017,9 @@ namespace WindowSpy
             _stopAll = false;
         }
 
-        private bool EvaluateExpression(string expr)
+        private bool EvaluateExpression(string expr, out string? errorMsg)
         {
+            errorMsg = null;
             // 预处理：替换中文引号和双引号为单引号
             expr = expr.Replace("“", "'").Replace("”", "'").Replace("\"", "'");
             
@@ -1586,6 +2089,21 @@ namespace WindowSpy
             object? result = null;
             string usedExpr = finalExpr;
 
+            // 检查是否包含字符串大小比较 (禁止 >, <, >=, <= 用于字符串)
+            // 字符串字面量正则: '(''|[^'])*'
+            // 比较运算符正则: (>=|<=|>(?![=])|<(?![=>]))  注意排除 = 和 <>
+            // 匹配模式: 字符串+运算符 或 运算符+字符串
+            var strCmpRegex = new System.Text.RegularExpressions.Regex(
+                @"('(''|[^'])*'\s*(>=|<=|>(?![=])|<(?![=>])))|((>=|<=|>(?![=])|<(?![=>]))\s*'(''|[^'])*')");
+
+            if (strCmpRegex.IsMatch(finalExpr))
+            {
+                errorMsg = "原因没有开启仅识别数字或未识别到数字，所以不支持大小比较运算 (>, <, >=, <=)";
+                string msg = errorMsg;
+                Dispatcher.Invoke(() => AppendExprLog($"表达式错误：{msg}"));
+                return false;
+            }
+
             try
             {
                 result = RunCompute(finalExpr);
@@ -1603,12 +2121,14 @@ namespace WindowSpy
                     }
                     catch (Exception ex2)
                     {
+                        errorMsg = ex2.Message;
                         Dispatcher.Invoke(() => AppendExprLog($"表达式错误(重试失败)：{ex2.Message}"));
                         return false;
                     }
                 }
                 else
                 {
+                    errorMsg = ex.Message;
                     Dispatcher.Invoke(() => AppendExprLog($"表达式错误：{ex.Message}"));
                     return false;
                 }
@@ -1667,6 +2187,7 @@ namespace WindowSpy
                 return v != 0;
             }
             
+            errorMsg = "计算结果无效";
             return false;
         }
 
@@ -1713,16 +2234,80 @@ namespace WindowSpy
             public bool JumpOnTrue { get; set; }
             public bool OcrNumbersOnly { get; set; }
             public bool ReuseOcrOnRoiUnchanged { get; set; }
+            public string NetworkAdapterName { get; set; } = "";
+            public bool NetworkEnable { get; set; }
+        }
+
+        private void MainWindow_Loaded(object sender, RoutedEventArgs e)
+        {
+            EnsureSavedQueuesDir();
+            LoadSavedScripts();
+        }
+
+        private void EnsureSavedQueuesDir()
+        {
+            if (!System.IO.Directory.Exists(_savedQueuesDir))
+            {
+                try { System.IO.Directory.CreateDirectory(_savedQueuesDir); } catch { }
+            }
+        }
+
+        private void LoadSavedScripts()
+        {
+            if (QuickLoadCombo == null) return;
+            try
+            {
+                EnsureSavedQueuesDir();
+                var files = System.IO.Directory.GetFiles(_savedQueuesDir, "*.json");
+                var items = files.Select(f => System.IO.Path.GetFileName(f)).ToList();
+                QuickLoadCombo.ItemsSource = items;
+            }
+            catch (Exception ex)
+            {
+                AppendLog($"刷新队列列表失败: {ex.Message}");
+            }
+        }
+
+        private void QuickLoadCombo_SelectionChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
+        {
+            if (QuickLoadCombo.SelectedItem is string filename)
+            {
+                var fullPath = System.IO.Path.Combine(_savedQueuesDir, filename);
+                LoadStepsFromFile(fullPath);
+            }
+        }
+
+        private void RefreshScripts_Click(object sender, RoutedEventArgs e)
+        {
+            LoadSavedScripts();
+            AppendLog("已刷新队列列表");
+        }
+
+        private void OpenScriptDir_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                EnsureSavedQueuesDir();
+                Process.Start("explorer.exe", _savedQueuesDir);
+            }
+            catch (Exception ex)
+            {
+                AppendLog($"无法打开目录: {ex.Message}");
+            }
         }
 
         private void SaveSteps_Click(object sender, RoutedEventArgs e)
         {
+            EnsureSavedQueuesDir();
             var dlg = new SaveFileDialog();
             dlg.Filter = "JSON 文件|*.json";
             dlg.FileName = "steps.json";
+            dlg.InitialDirectory = _savedQueuesDir;
             if (dlg.ShowDialog() == true)
             {
-                var stepList = _steps.Select(s => new StepDto
+                var stepList = _steps
+                    .Where(s => s.Type != ActionType.Network)
+                    .Select(s => new StepDto
                 {
                     Type = s.Type.ToString(),
                     Target = s.Target.ToString(),
@@ -1739,7 +2324,9 @@ namespace WindowSpy
                     PointX = s.Point.X, PointY = s.Point.Y,
                     JumpOnTrue = s.JumpOnTrue,
                     OcrNumbersOnly = s.OcrNumbersOnly,
-                    ReuseOcrOnRoiUnchanged = s.ReuseOcrOnRoiUnchanged
+                    ReuseOcrOnRoiUnchanged = s.ReuseOcrOnRoiUnchanged,
+                    NetworkAdapterName = s.NetworkAdapterName,
+                    NetworkEnable = s.NetworkEnable
                 }).ToList();
 
                 var inputDialog = new InputDialog("步骤队列使用事项", "请输入使用说明（可选）：");
@@ -1753,6 +2340,7 @@ namespace WindowSpy
                     var json = JsonSerializer.Serialize(fileData, new JsonSerializerOptions { WriteIndented = true });
                     System.IO.File.WriteAllText(dlg.FileName, json);
                     AppendLog($"已保存队列：{dlg.FileName}");
+                    LoadSavedScripts(); // Refresh list after save
                 }
             }
         }
@@ -1767,11 +2355,18 @@ namespace WindowSpy
         {
             var dlg = new OpenFileDialog();
             dlg.Filter = "JSON 文件|*.json";
+            dlg.InitialDirectory = _savedQueuesDir;
             if (dlg.ShowDialog() == true)
             {
+                LoadStepsFromFile(dlg.FileName);
+            }
+        }
+
+        private void LoadStepsFromFile(string filePath)
+        {
                 try
                 {
-                    var json = System.IO.File.ReadAllText(dlg.FileName);
+                    var json = System.IO.File.ReadAllText(filePath);
                     // 尝试作为新格式（带Note）解析
                     SavedFileDto? fileData = null;
                     try
@@ -1803,6 +2398,7 @@ namespace WindowSpy
                     _ocrRoiCache.Clear();
                     foreach (var d in list)
                     {
+                        if (string.Equals(d.Type, "Network", StringComparison.OrdinalIgnoreCase)) continue;
                         Enum.TryParse<ActionType>(d.Type, out var t);
                         Enum.TryParse<TargetType>(d.Target, out var tg);
                         var s = new ScriptStep
@@ -1822,7 +2418,9 @@ namespace WindowSpy
                             Point = new System.Drawing.Point(d.PointX, d.PointY),
                             JumpOnTrue = d.JumpOnTrue,
                             OcrNumbersOnly = d.OcrNumbersOnly,
-                            ReuseOcrOnRoiUnchanged = d.ReuseOcrOnRoiUnchanged
+                            ReuseOcrOnRoiUnchanged = d.ReuseOcrOnRoiUnchanged,
+                            NetworkAdapterName = d.NetworkAdapterName ?? "",
+                            NetworkEnable = d.NetworkEnable
                         };
                         _steps.Add(s);
                     }
@@ -1835,19 +2433,23 @@ namespace WindowSpy
                         UsageNoteText.Visibility = Visibility.Visible;
                     }
 
-                    AppendLog($"已加载队列：{dlg.FileName}");
+                    AppendLog($"已加载队列：{System.IO.Path.GetFileName(filePath)}");
                 }
                 catch (Exception ex)
                 {
                     AppendLog($"加载失败：{ex.Message}");
                 }
-            }
+        }
+
+        private void StopScript()
+        {
+            _stopAll = true;
+            AppendLog("已请求停止全部步骤");
         }
 
         private void StopAll_Click(object sender, RoutedEventArgs e)
         {
-            _stopAll = true;
-            AppendLog("已请求停止全部步骤");
+            StopScript();
         }
 
         private bool _identifyingKey = false;
@@ -2246,12 +2848,42 @@ namespace WindowSpy
 
             if (batch.Count > 0 && OutputBox != null)
             {
-                var sb = new System.Text.StringBuilder();
+                var paragraph = OutputBox.Document.Blocks.FirstBlock as System.Windows.Documents.Paragraph;
+                if (paragraph == null)
+                {
+                    paragraph = new System.Windows.Documents.Paragraph();
+                    OutputBox.Document.Blocks.Add(paragraph);
+                }
+
                 foreach (var item in batch)
                 {
-                    sb.Append(item.ts.ToString("HH:mm:ss")).Append(' ').Append(item.text).Append('\n');
+                    var timestampRun = new System.Windows.Documents.Run(item.ts.ToString("HH:mm:ss") + " ") { Foreground = System.Windows.Media.Brushes.Black };
+                    paragraph.Inlines.Add(timestampRun);
+
+                    string[] logParts = System.Text.RegularExpressions.Regex.Split(item.text, @"( 未识别到数据 大概原因：识别区域过小或执行速度太快没有识别到对应图片| 未识别到数据 大概原因：识别区域过小或执行速度太快没有识别到对应应图片| 未识别到数据可能原因：识别区域过小或执行速度太快没有识别到对应应图片| 未识别到数据| 未识别到)");
+                    foreach (var part in logParts)
+                    {
+                        if (string.IsNullOrEmpty(part)) continue;
+                        if (part.StartsWith(" 未识别到"))
+                        {
+                            paragraph.Inlines.Add(new System.Windows.Documents.Run(part) { Foreground = System.Windows.Media.Brushes.Red });
+                        }
+                        else
+                        {
+                            paragraph.Inlines.Add(new System.Windows.Documents.Run(part) { Foreground = System.Windows.Media.Brushes.Black });
+                        }
+                    }
+                    paragraph.Inlines.Add(new System.Windows.Documents.LineBreak());
                 }
-                OutputBox.AppendText(sb.ToString());
+
+                if (paragraph.Inlines.Count > 2000)
+                {
+                    OutputBox.Document.Blocks.Clear();
+                    paragraph = new System.Windows.Documents.Paragraph();
+                    paragraph.Inlines.Add(new System.Windows.Documents.Run($"[系统] 日志过长已自动清理 ({DateTime.Now:HH:mm:ss})\n") { Foreground = System.Windows.Media.Brushes.Gray });
+                    OutputBox.Document.Blocks.Add(paragraph);
+                }
+
                 OutputBox.ScrollToEnd();
             }
 
@@ -2302,6 +2934,10 @@ namespace WindowSpy
                     sb.Append(item.ts.ToString("HH:mm:ss")).Append(' ').Append(item.text).Append('\n');
                 }
                 ExprLogBox.AppendText(sb.ToString());
+                if (ExprLogBox.Text.Length > 20000)
+                {
+                    ExprLogBox.Text = "[系统] 日志过长已清理\n" + ExprLogBox.Text.Substring(ExprLogBox.Text.Length - 10000);
+                }
                 ExprLogBox.ScrollToEnd();
             }
 
@@ -2316,16 +2952,20 @@ namespace WindowSpy
 
         private void CopyLog_Click(object sender, RoutedEventArgs e)
         {
-            if (OutputBox != null && !string.IsNullOrEmpty(OutputBox.Text))
+            if (OutputBox != null)
             {
-                try
+                var textRange = new System.Windows.Documents.TextRange(OutputBox.Document.ContentStart, OutputBox.Document.ContentEnd);
+                if (!string.IsNullOrWhiteSpace(textRange.Text))
                 {
-                    Clipboard.SetText(OutputBox.Text);
-                    MessageBox.Show("日志已复制到剪贴板", "提示", MessageBoxButton.OK, MessageBoxImage.Information);
-                }
-                catch (Exception ex)
-                {
-                    MessageBox.Show($"复制失败：{ex.Message}", "错误", MessageBoxButton.OK, MessageBoxImage.Error);
+                    try
+                    {
+                        Clipboard.SetText(textRange.Text);
+                        MessageBox.Show("日志已复制到剪贴板", "提示", MessageBoxButton.OK, MessageBoxImage.Information);
+                    }
+                    catch (Exception ex)
+                    {
+                        MessageBox.Show($"复制失败：{ex.Message}", "错误", MessageBoxButton.OK, MessageBoxImage.Error);
+                    }
                 }
             }
         }

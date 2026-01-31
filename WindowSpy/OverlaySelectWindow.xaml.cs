@@ -59,8 +59,12 @@ namespace WindowSpy
             var height = SelectionRect.Height;
 
             var topLeft = RootCanvas.PointToScreen(new Point(left, top));
+            var bottomRight = RootCanvas.PointToScreen(new Point(left + width, top + height));
             
-            SelectedRect = new System.Drawing.Rectangle((int)topLeft.X, (int)topLeft.Y, (int)width, (int)height);
+            var physW = Math.Abs(bottomRight.X - topLeft.X);
+            var physH = Math.Abs(bottomRight.Y - topLeft.Y);
+
+            SelectedRect = new System.Drawing.Rectangle((int)topLeft.X, (int)topLeft.Y, (int)physW, (int)physH);
 
             DialogResult = true;
             Close();

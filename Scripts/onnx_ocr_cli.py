@@ -181,7 +181,7 @@ def main():
                 sys.stderr.write("[Python Info] Result processed, encoding JSON...\n")
                 sys.stderr.flush()
                 
-                json_str = json.dumps(result, ensure_ascii=False)
+                json_str = json.dumps(result, ensure_ascii=True)
                 
                 sys.stderr.write("[Python Info] Sending JSON to stdout...\n")
                 sys.stderr.flush()
@@ -201,7 +201,7 @@ def main():
             return 1
         
         result = process_image(model, args.image)
-        print(json.dumps(result, ensure_ascii=False))
+        print(json.dumps(result, ensure_ascii=True))
 
     return 0
 
