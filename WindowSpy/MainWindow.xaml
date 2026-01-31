@@ -284,7 +284,8 @@
                 <StackPanel Margin="8">
                     <TextBlock Text="MoliGod 自动化助手" FontSize="16" FontWeight="Bold" Margin="0,0,0,8"/>
                     <TextBlock Text="版本：v0.2" Margin="0,0,0,4"/>
-                    <TextBlock Text="作者：moligod(B站抖音快手小红书同名)" Margin="0,0,0,8"/>
+                    <TextBlock Text="作者：moligod(B站抖音快手小红书同名)" Margin="0,0,0,4"/>
+                    <TextBlock Text="反馈群：856078436" Margin="0,0,0,4"/>
                     
                     <TextBlock Margin="0,0,0,4">
                         <Run Text="赞助支持："/>
@@ -300,24 +301,23 @@
                         </Hyperlink>
                     </TextBlock>
 
-                    <TextBlock Margin="0,0,0,16">
+                    <TextBlock Margin="0,0,0,4">
                         <Run Text="GitHub下载(国外)："/>
                         <Hyperlink NavigateUri="https://github.com/moligod/DF-AutomatedTool/releases" RequestNavigate="Hyperlink_RequestNavigate">
                             https://github.com/moligod/DF-AutomatedTool/releases
                         </Hyperlink>
                     </TextBlock>
 
-                    <TextBlock Text="反馈群856078436" 
-                               Foreground="Black" FontSize="16" FontWeight="Bold" 
+                    <TextBlock Text="常见问题:如果鼠标无法移动请使用管理员启动程序(默认管理员启动)" 
+                               FontSize="14" FontWeight="Bold" 
                                HorizontalAlignment="Left" TextWrapping="Wrap" Margin="0,0,0,4"/>
-                    <TextBlock Text="注意：如果鼠标无法移动请使用管理员启动程序(默认管理员启动)" 
-                               FontSize="16" FontWeight="Bold" 
+                    <TextBlock Text="识别技巧:识别的区域范围越小识别的速度越快(OCRTime识别速度)" 
+                               FontSize="14" FontWeight="Bold" 
                                HorizontalAlignment="Left" TextWrapping="Wrap" Margin="0,0,0,4"/>
-                    <TextBlock Text="温馨提示:识别的区域范围越小识别的速度越快(OCRTime识别速度)" 
-                               FontSize="16" FontWeight="Bold" 
-                               HorizontalAlignment="Left" TextWrapping="Wrap" Margin="0,0,0,16"/>
-                    <TextBlock Text="本工具为纯OCR识别点击,用前请记住,怕别用用别怕！" TextWrapping="Wrap" Foreground="Red" FontSize="15" FontWeight="Bold"/>
-                    <TextBlock Text="本软件开源免费仅供学习交流，请勿用于非法用途以及商业用途！" TextWrapping="Wrap" Foreground="Red" FontSize="20" FontWeight="Bold"/>
+                    <TextBlock Text="温馨提示:本工具为纯OCR识别点击,用前请记住,怕别用,用别怕!" 
+                               FontSize="14" FontWeight="Bold" 
+                               HorizontalAlignment="Left" TextWrapping="Wrap" Margin="0,0,0,4"/>
+                    <TextBlock Text="本软件开源免费仅供学习交流，请勿用于非法用途以及商业用途!" TextWrapping="Wrap" Foreground="Red" FontSize="20" FontWeight="Bold"/>
                 </StackPanel>
             </TabItem>
         </TabControl>
