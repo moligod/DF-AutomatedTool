@@ -73,4 +73,4 @@
 
 ## 许可证
 
-MIT License
+GPL License
